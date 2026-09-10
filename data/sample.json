@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "exportedAt": "2026-09-10",
+    "source": "示例数据（已脱敏，可公开）",
+    "note": "IP 中段打码、主机名为虚构、所有口令字段已移除，用于演示工作台功能"
+  },
+  "hosts": [
+    {
+      "id": "demo-p01-G1-S1-1", "project": "hg45-示例交易中心-某云-张三N000001", "seq": "G1-S1-1",
+      "eu": "某省公共资源交易中心", "isv": "某软件有限公司",
+      "purpose": "某省公共资源交易系统", "arch": "高可用", "code": "demo-jyzx",
+      "role": "备（暂时）", "installDate": "2025-11-21", "dbid": "7575542466411471000",
+      "vendor": "鲲鹏", "cloud": "某云", "nic": "enp1s0", "ip": "10.***.26.82/24",
+      "mac": "", "fip": "100.***.3.170", "vip": "10.***.26.109",
+      "cpuModel": "Kunpeng-920", "cpuArch": "aarch64", "cpuLogic": 16, "threadsPerCore": 1,
+      "coresPerSocket": 16, "sockets": 1, "numa": 1,
+      "memTotal": 32, "memAvail": null, "swap": 0,
+      "os": "Kylin V10 SP2 (Sword) aarch64", "hostname": "ecs-demo-0001.novalocal",
+      "osUser": "highgo", "osPass": "", "locale": "en_US.UTF-8",
+      "dbVersion": "hgdb-45103", "licenseExpiry": "2026-02-18", "plugins": "",
+      "ha": "hghac-427", "scope": "demo-jyzx", "rwSplit": "-",
+      "backupTime": "23:30:00", "backupKeep": "3", "backupScript": "hgdb_backup_20241231_rebak.sh",
+      "disks": [
+        {"usage": "数据盘", "dev": "/dev/sdc", "type": "HDD", "lvm": "否", "lv": "-", "fs": "xfs", "size": "500 GB", "mount": "/data"},
+        {"usage": "系统盘", "dev": "/dev/vda", "type": "HDD", "lvm": "否", "lv": "-", "fs": "ext4", "size": "40 GB", "mount": "/"}
+      ],
+      "dataDir": "/data/highgo/data",
+      "perf": {"write3k": "12.9 MB/s", "read3k": "4.6 GB/s", "write8m": "245 MB/s", "lat1": 6.5, "tps1Conn": 1539.41, "tps1NoConn": 1539.90, "lat2": 25.03, "tps2Conn": 7990.44, "tps2NoConn": 7990.57},
+      "tuning": {"sharedBuffers": "8GB", "walBuffers": "16MB"},
+      "pkg": ""
+    },
+    {
+      "id": "demo-p01-G1-S3-1", "project": "hg45-示例交易中心-某云-张三N000001", "seq": "G1-S3-1",
+      "eu": "某省公共资源交易中心", "isv": "某软件有限公司",
+      "purpose": "某省公共资源交易系统", "arch": "高可用", "code": "demo-jyzx",
+      "role": "主（暂时）", "installDate": "2025-11-21", "dbid": "7575542466411471000",
+      "vendor": "鲲鹏", "cloud": "某云", "nic": "enp1s0", "ip": "10.***.26.84/24",
+      "mac": "", "fip": "100.***.11.167", "vip": "",
+      "cpuModel": "Kunpeng-920", "cpuArch": "aarch64", "cpuLogic": 16, "threadsPerCore": 1,
+      "coresPerSocket": 16, "sockets": 1, "numa": 1,
+      "memTotal": 32, "memAvail": null, "swap": 0,
+      "os": "Kylin V10 SP2 (Sword) aarch64", "hostname": "ecs-demo-0002.novalocal",
+      "osUser": "highgo", "osPass": "", "locale": "en_US.UTF-8",
+      "dbVersion": "hgdb-45103", "licenseExpiry": "2026-02-18", "plugins": "",
+      "ha": "hghac-427", "scope": "demo-jyzx", "rwSplit": "-",
+      "backupTime": "23:30:00", "backupKeep": "3", "backupScript": "hgdb_backup_20241231_rebak.sh",
+      "disks": [
+        {"usage": "数据盘", "dev": "/dev/sdc", "type": "HDD", "lvm": "否", "lv": "-", "fs": "xfs", "size": "500 GB", "mount": "/data"},
+        {"usage": "系统盘", "dev": "/dev/vda", "type": "HDD", "lvm": "否", "lv": "-", "fs": "ext4", "size": "40 GB", "mount": "/"}
+      ],
+      "dataDir": "/data/highgo/data",
+      "perf": {"write3k": "13.0 MB/s", "read3k": "4.8 GB/s", "write8m": "255 MB/s", "lat1": 6.79, "tps1Conn": 1472.38, "tps1NoConn": 1472.80, "lat2": 26.64, "tps2Conn": 7506.58, "tps2NoConn": 7506.71},
+      "tuning": {"sharedBuffers": "8GB", "walBuffers": "16MB"},
+      "pkg": ""
+    },
+    {
+      "id": "demo-p05-1", "project": "hg45-示例共青团-某云-李四N000002", "seq": "1",
+      "eu": "某市委员会", "isv": "某系统集成有限公司",
+      "purpose": "某单位门户网站", "arch": "单机", "code": "hgdb",
+      "role": "-", "installDate": "2026-02-02", "dbid": "",
+      "vendor": "", "cloud": "某云", "nic": "ens3", "ip": "10.***.109.7/24",
+      "mac": "", "fip": "", "vip": "",
+      "cpuModel": "Hygon Dhyana Processor", "cpuArch": "x86_64", "cpuLogic": 4, "threadsPerCore": 2,
+      "coresPerSocket": 2, "sockets": 1, "numa": 1,
+      "l1d": "64 KiB", "l1i": "128 KiB", "l2": "1 MiB", "l3": "8 MiB", "virt": "KVM / full",
+      "memTotal": 8, "memAvail": 8, "swap": 0,
+      "os": "Kylin V10 SP2 (Sword) x86_64", "hostname": "sq-demo-0001.novalocal",
+      "osUser": "highgo", "osPass": "", "locale": "en_US.UTF-8",
+      "dbVersion": "hgdb-45X3", "licenseExpiry": "2026-10-26", "plugins": "",
+      "ha": "-", "scope": "-", "rwSplit": "-",
+      "backupTime": "23:30", "backupKeep": "3", "backupScript": "hgdb_backup_20241231_rebak.sh",
+      "disks": [
+        {"usage": "数据盘", "dev": "/dev/vdc", "type": "HDD", "lvm": "否", "lv": "-", "fs": "ext4", "size": "100GB", "mount": "/data"},
+        {"usage": "系统盘", "dev": "/dev/vda", "type": "HDD", "lvm": "否", "lv": "-", "fs": "ext4", "size": "100GB", "mount": "/"}
+      ],
+      "dataDir": "实例：/data/highgo/data / 归档：/data/highgo/hgdbbak/archive / 备份：/data/highgo/hgdbbak",
+      "perf": {"write3k": "10.7 MB/s", "read3k": "8.4 GB/s", "write8m": "221 MB/s", "lat1": 5.825, "tps1Conn": 1716.88, "tps1NoConn": 1717.47, "lat2": 73.885, "tps2Conn": 2706.90, "tps2NoConn": 2706.94},
+      "tuning": {"maxConnections": "2000", "sharedBuffers": "2GB", "effectiveCacheSize": "6GB", "maintenanceWorkMem": "512MB", "checkpointCompletionTarget": "0.9", "walBuffers": "16MB", "defaultStatisticsTarget": "100", "randomPageCost": "4", "effectiveIoConcurrency": "2", "workMem": "16MB", "hugePages": "off", "minWalSize": "2GB", "maxWalSize": "8GB", "maxWorkerProcesses": "4", "maxParallelWorkersPerGather": "2", "maxParallelWorkers": "4", "maxParallelMaintenanceWorkers": "2"},
+      "pkg": ""
+    },
+    {
+      "id": "demo-p07-G1-S1-1", "project": "hg45-示例环境-某云-王五N000003", "seq": "G1-S1-1",
+      "eu": "某市生态环境局", "isv": "某科技股份有限公司",
+      "purpose": "某省污染源自动监控系统（地市版）", "arch": "流复制", "code": "hgdb01",
+      "role": "主", "installDate": "2026-03-02", "dbid": "7612497510997331000",
+      "vendor": "", "cloud": "某云", "nic": "enp3s0", "ip": "172.***.28.39/24",
+      "mac": "", "fip": "10.***.36.132", "vip": "",
+      "cpuModel": "Kunpeng-920", "cpuArch": "aarch64", "cpuLogic": 24, "threadsPerCore": 1,
+      "coresPerSocket": 1, "sockets": 24, "numa": 2, "freqMax": 2600,
+      "l1d": "1.5 MiB", "l1i": "1.5 MiB", "l2": "12 MiB", "l3": "768 MiB",
+      "memTotal": 190, "memAvail": 185, "swap": 8,
+      "os": "Kylin V10 SP3 (Lance) aarch64", "hostname": "ecs-demo-sjk01.novalocal",
+      "osUser": "highgo", "osPass": "", "locale": "zh_CN.UTF-8",
+      "dbVersion": "hgdb-45X3", "licenseExpiry": "2026-05-26", "plugins": "PostGIS 340",
+      "ha": "stream", "scope": "-", "rwSplit": "-",
+      "backupTime": "23:30", "backupKeep": "1", "backupScript": "hgdb_backup_20241231_rebak.sh",
+      "disks": [
+        {"usage": "数据盘", "dev": "/dev/vdb", "type": "SSD", "lvm": "是", "lv": "vg1-lv--data", "fs": "ext4", "size": "400GB", "mount": "/data"},
+        {"usage": "系统盘", "dev": "/dev/vda", "type": "SSD", "lvm": "是", "lv": "klas-root", "fs": "xfs", "size": "61GB", "mount": "/"}
+      ],
+      "dataDir": "实例：/data/highgo/data / 归档：/hgdbarch / 备份：/hgdbbak",
+      "perf": {"write3k": "10.6 MB/s", "read3k": "7.3 GB/s", "write8m": "621 MB/s", "lat1": 2.97, "tps1Conn": 3366.73, "tps1NoConn": 3368.42, "lat2": 13.416, "tps2Conn": 14907.78, "tps2NoConn": 14907.93},
+      "tuning": {"maxConnections": "2000", "sharedBuffers": "48640MB", "effectiveCacheSize": "145920MB", "maintenanceWorkMem": "2GB", "checkpointCompletionTarget": "0.9", "walBuffers": "16MB", "defaultStatisticsTarget": "100", "randomPageCost": "1.1", "effectiveIoConcurrency": "200", "workMem": "24608kB", "hugePages": "try", "minWalSize": "2GB", "maxWalSize": "8GB", "maxWorkerProcesses": "24", "maxParallelWorkersPerGather": "4", "maxParallelWorkers": "24", "maxParallelMaintenanceWorkers": "4"},
+      "pkg": "hgdb-4.5-e94b212-20250227.aarch64.rpm"
+    },
+    {
+      "id": "demo-p09-G0-S1-1", "project": "hg45-示例城管局-某云-赵六N000004", "seq": "G0-S1-1",
+      "eu": "某市城市管理局", "isv": "某软件科技有限公司",
+      "purpose": "某市监测监管平台", "arch": "单机", "code": "",
+      "role": "-", "installDate": "2026-03-18", "dbid": "7618490460835096000",
+      "vendor": "", "cloud": "某云", "nic": "enp3s0", "ip": "172.***.10.144/24",
+      "mac": "", "fip": "", "vip": "",
+      "cpuModel": "Kunpeng-920", "cpuArch": "aarch64", "cpuLogic": 2, "threadsPerCore": 1,
+      "coresPerSocket": 2, "sockets": 1, "numa": 1, "freqMax": 2600,
+      "l1d": "128 KiB", "l1i": "128 KiB", "l2": "1 MiB", "l3": "32 MiB",
+      "memTotal": 8, "memAvail": 6.6, "swap": 8,
+      "os": "Kylin V10 SP3 (Lance) aarch64", "hostname": "ec-demo-27",
+      "osUser": "highgo", "osPass": "", "locale": "zh_CN.UTF-8",
+      "dbVersion": "hgdb-45X3", "licenseExpiry": "2027-03-17", "plugins": "",
+      "ha": "-", "scope": "-", "rwSplit": "-",
+      "backupTime": "", "backupKeep": "", "backupScript": "",
+      "disks": [
+        {"usage": "数据盘", "dev": "/dev/vdb", "type": "HDD", "lvm": "是", "lv": "vg1-lv--data", "fs": "xfs", "size": "700GB", "mount": "/data"},
+        {"usage": "系统盘", "dev": "/dev/vda3", "type": "HDD", "lvm": "否", "lv": "-", "fs": "ext4", "size": "31GB", "mount": "/"}
+      ],
+      "dataDir": "实例：/data/highgo/data / 归档：/hgdbarch / 备份：/hgdbbak",
+      "perf": {"write3k": "22.0 MB/s", "read3k": "6.9 GB/s", "write8m": "173 MB/s", "lat1": 7.461, "tps1Conn": 1340.33, "tps1NoConn": 1340.63, "lat2": 111.738, "tps2Conn": 1789.90, "tps2NoConn": 1789.92},
+      "tuning": {"maxConnections": "200", "sharedBuffers": "1792MB", "effectiveCacheSize": "5376MB", "maintenanceWorkMem": "448MB", "checkpointCompletionTarget": "0.9", "walBuffers": "16MB", "defaultStatisticsTarget": "100", "randomPageCost": "4", "effectiveIoConcurrency": "2", "workMem": "8822KB", "hugePages": "off", "minWalSize": "2GB", "maxWalSize": "8GB"},
+      "pkg": "hgdb-4.5-e94b212-20250227.aarch64.rpm"
+    }
+  ]
+}

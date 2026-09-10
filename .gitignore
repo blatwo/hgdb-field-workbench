@@ -1,0 +1,19 @@
+# 真实项目数据 —— 含明文口令 / 内网 IP / MAC / 主机 UUID，绝不提交
+# 规则优先于自律：任何匹配下列模式的文件都会被 git 忽略
+data/real.json
+data/real.*.json
+data/**/*.real.json
+*.local.json
+*.local.html
+
+# 本地导出的备份快照
+backup/
+snapshots/
+
+# 编辑器与系统
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

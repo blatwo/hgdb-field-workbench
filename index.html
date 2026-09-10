@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>瀚高项目实施工作台</title>
+<!-- 本工作台通过 WorkBuddy 资料库能力（library skill）搭建、存储和部署 -->
+<style>
+:root{
+  --bg:#F6F7F9; --card:#FFFFFF; --text:#1F2328; --text2:#5F6B7A; --text3:#919BA8;
+  --border:#E4E8EE; --border2:#D3D9E0;
+  --primary:#185FA5; --primary-bg:#E6F1FB; --primary-line:#85B7EB;
+  --danger:#C0392B; --danger-bg:#FCEBEB; --danger-line:#F09595;
+  --warn:#A86A00; --warn-bg:#FAEEDA; --warn-line:#EF9F27;
+  --ok:#3B6D11; --ok-bg:#EAF3DE; --ok-line:#97C459;
+  --navh:63px;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+h1{font-size:20px;font-weight:600;letter-spacing:-.2px}
+h2{font-size:15px;font-weight:600}
+h3{font-size:13px;font-weight:600}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
+a{color:var(--primary);text-decoration:none}
+
+/* ── Header ── */
+header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.hd{display:flex;align-items:center;gap:12px;padding:14px 0;flex-wrap:wrap}
+.hd-main{flex:1;min-width:200px}
+.hd-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.hd-tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;
+  border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--card);
+  color:var(--text2);font-size:13px;font-weight:500;transition:.15s;
+}
+.btn:hover{background:var(--bg);border-color:var(--text3)}
+.btn:active{transform:scale(.97)}
+.btn-pri{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-pri:hover{background:#12497F;border-color:#12497F}
+.btn-danger{color:var(--danger);border-color:var(--danger-line)}
+.btn-danger:hover{background:var(--danger-bg)}
+.btn-on{background:var(--primary-bg);border-color:var(--primary-line);color:var(--primary)}
+.btn svg{width:15px;height:15px;flex-shrink:0}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;
+  font-size:11px;font-weight:600;line-height:1.7;white-space:nowrap;
+}
+.badge-gray{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-danger{background:var(--danger-bg);color:var(--danger)}
+
+/* ── Nav ── */
+nav{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:var(--navh);z-index:49}
+.nav-in{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+.nav-in::-webkit-scrollbar{display:none}
+.nav-btn{
+  flex-shrink:0;min-height:34px;padding:0 14px;border-radius:20px;font-size:13px;
+  font-weight:500;color:var(--text2);display:inline-flex;align-items:center;gap:6px;
+}
+.nav-btn:hover{background:var(--bg)}
+.nav-btn.act{background:var(--primary-bg);color:var(--primary);font-weight:600}
+.nav-btn svg{width:14px;height:14px}
+
+/* ── Sections ── */
+section{scroll-margin-top:calc(var(--navh) + 52px);margin-top:20px}
+.sec-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.sec-hd .cnt{font-size:12px;color:var(--text3)}
+.sec-desc{font-size:12px;color:var(--text3);font-weight:400;width:100%;margin-top:-4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:16px}
+
+/* ── Today ── */
+#today{margin-top:16px}
+.today-card{border:1px solid var(--danger-line);background:linear-gradient(180deg,#FEF7F7 0%,#FFFFFF 60%)}
+.today-hd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.today-hd h2{color:var(--danger)}
+.today-hd .n{margin-left:auto;font-size:12px;color:var(--text3)}
+.today-list{list-style:none}
+.today-item{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.today-item:last-child{border-bottom:none}
+.ti-body{flex:1;min-width:0}
+.ti-title{font-size:14px;font-weight:500;word-break:break-word}
+.ti-meta{font-size:12px;color:var(--text3);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.ti-act{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.overdue-tag{color:var(--danger);font-weight:600}
+.due-tag{color:var(--warn);font-weight:600}
+.empty{padding:28px 16px;text-align:center;color:var(--text3);font-size:13px}
+.empty svg{width:32px;height:32px;opacity:.4;display:block;margin:0 auto 8px}
+
+/* ── License ── */
+.lic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.lic-item{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card)}
+.lic-item.st-danger{border-color:var(--danger-line);background:var(--danger-bg)}
+.lic-item.st-warn{border-color:var(--warn-line);background:var(--warn-bg)}
+.lic-item.st-ok{background:var(--card)}
+.lic-item.st-none{opacity:.72}
+.ring{flex-shrink:0}
+.lic-body{flex:1;min-width:0}
+.lic-proj{font-size:13px;font-weight:600;word-break:break-word;line-height:1.4}
+.lic-meta{font-size:12px;color:var(--text2);margin-top:3px;word-break:break-word}
+.lic-date{font-size:12px;color:var(--text3);margin-top:4px;font-variant-numeric:tabular-nums}
+.lic-flag{font-size:12px;font-weight:600;margin-top:5px}
+.st-danger .lic-flag{color:var(--danger)}
+.st-warn .lic-flag{color:var(--warn)}
+.st-ok .lic-flag{color:var(--ok)}
+.st-none .lic-flag{color:var(--text3)}
+
+/* ── Stats ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
+.stat{padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card)}
+.stat .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat .k{font-size:12px;color:var(--text3);margin-top:2px}
+.stat.danger .v{color:var(--danger)}
+.stat.warn .v{color:var(--warn)}
+.stat.ok .v{color:var(--ok)}
+
+/* ── Projects ── */
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.proj-card{padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card)}
+.proj-name{font-size:13px;font-weight:600;word-break:break-word;line-height:1.4}
+.proj-eu{font-size:12px;color:var(--text2);margin-top:2px;word-break:break-word}
+.proj-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.proj-kv{font-size:12px;color:var(--text3)}
+.proj-kv b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.proj-hosts{list-style:none;margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
+.proj-hosts li{font-size:12px;color:var(--text2);padding:3px 0;display:flex;gap:8px;align-items:center}
+.proj-hosts .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--text3);min-width:74px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-main{background:var(--ok)}
+.dot-standby{background:var(--primary-line)}
+.dot-other{background:var(--border2)}
+
+/* ── Filters ── */
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filters select,.filters input{
+  min-height:38px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);
+  background:var(--card);font-size:13px;
+}
+.filters input{flex:1;min-width:150px;padding:0 12px}
+
+/* ── Host table ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
+th{
+  text-align:left;padding:10px 12px;font-size:12px;font-weight:600;color:var(--text3);
+  border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap;
+}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tbody tr{cursor:pointer;transition:.12s}
+tbody tr:hover{background:var(--primary-bg)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.cell-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ── Perf ── */
+.perf-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-bottom:12px}
+.perf-legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.perf-note{font-size:12px;color:var(--text3);margin-top:10px;line-height:1.6}
+
+/* ── Modal ── */
+.mask{
+  position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:100;display:none;
+  padding:20px;overflow-y:auto;
+}
+.mask.open{display:block}
+.modal{
+  background:var(--card);border-radius:var(--radius);max-width:760px;margin:20px auto;
+  box-shadow:0 20px 48px rgba(16,24,40,.2);overflow:hidden;
+}
+.modal-hd{display:flex;align-items:flex-start;gap:12px;padding:16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card)}
+.modal-hd h2{font-size:15px;word-break:break-word;flex:1}
+.x{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text3);flex-shrink:0}
+.x:hover{background:var(--bg)}
+.modal-bd{padding:16px;max-height:calc(100vh - 220px);overflow-y:auto}
+.dl-group{margin-bottom:18px}
+.dl-group:last-child{margin-bottom:0}
+.dl-group h3{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.dl{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:13px}
+.dl dt{color:var(--text3);font-size:12px;word-break:break-word}
+.dl dd{color:var(--text);word-break:break-word;font-variant-numeric:tabular-nums}
+.dl dd.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.sec-val{color:var(--text3)}
+.disk-tbl{width:100%;min-width:0;font-size:12px}
+.disk-tbl th{position:static;background:var(--bg)}
+.disk-tbl td,.disk-tbl th{padding:6px 8px}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:32px;z-index:200;
+  background:var(--text);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
+  opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center;
+}
+#toast.show{opacity:1;bottom:44px}
+
+/* ── Banner ── */
+.banner{
+  display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-sm);
+  font-size:13px;margin-bottom:14px;border:1px solid;
+}
+.banner svg{width:16px;height:16px;flex-shrink:0;margin-top:2px}
+.banner-warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.banner-info{background:var(--primary-bg);border-color:var(--primary-line);color:var(--primary)}
+
+/* ── Todo form ── */
+.todo-form{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.todo-form input[type=text]{flex:2;min-width:160px;min-height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--radius-sm)}
+.todo-form input[type=date]{min-height:40px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--radius-sm)}
+.chk{
+  width:22px;height:22px;border:2px solid var(--border2);border-radius:6px;flex-shrink:0;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+.chk:hover{border-color:var(--primary)}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.chk svg{width:13px;height:13px;color:#fff;opacity:0}
+.chk.on svg{opacity:1}
+.ti-done .ti-title{text-decoration:line-through;color:var(--text3)}
+
+footer{text-align:center;padding:28px 16px 12px;color:var(--text3);font-size:12px}
+code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+@media(max-width:768px){
+  .wrap{padding:0 12px}
+  h1{font-size:18px}
+  .hd{padding:12px 0}
+  .hd-tools{width:100%}
+  .btn{flex:1;justify-content:center;min-width:0;padding:0 8px;font-size:12px;gap:4px}
+  .btn svg{width:15px;height:15px}
+  .lic-grid,.proj-grid{grid-template-columns:1fr}
+  .dl{grid-template-columns:92px 1fr}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .modal{margin:10px auto}
+  .modal-bd{max-height:calc(100vh - 200px)}
+  .ti-act{width:100%;margin-top:6px}
+  .today-item{flex-wrap:wrap}
+}
+@media(min-width:769px){
+  .btn span{display:inline}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hd">
+      <div class="hd-main">
+        <h1>瀚高项目实施工作台</h1>
+        <div class="hd-sub" id="hdSub">加载中…</div>
+      </div>
+      <div class="hd-tools">
+        <button class="btn btn-on" id="btnMask" title="脱敏显示">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="maskLabel">脱敏开</span>
+        </button>
+        <button class="btn" id="btnImport" title="导入真实数据 JSON">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9m0 0L8 13m4-4l4 4M4 3h16"/></svg>
+          <span>导入</span>
+        </button>
+        <button class="btn" id="btnExport" title="导出 JSON 备份">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+          <span>导出</span>
+        </button>
+        <button class="btn btn-danger" id="btnReset" title="清空并恢复示例数据">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13h10l1-13"/></svg>
+          <span>清空</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-in">
+      <button class="nav-btn act" data-go="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3L22 20H2L12 3z"/><path d="M12 9v5M12 17.5v.01"/></svg>今天要处理</button>
+      <button class="nav-btn" data-go="license"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>授权预警</button>
+      <button class="nav-btn" data-go="projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>项目看板</button>
+      <button class="nav-btn" data-go="hosts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>资源台账</button>
+      <button class="nav-btn" data-go="perf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20V14M22 20H2"/></svg>性能基线</button>
+    </div>
+  </div>
+</nav>
+
+<input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+<div class="wrap">
+  <div id="banner" style="display:none"></div>
+
+  <section id="today">
+    <div class="sec-hd"><h2>今天要处理</h2><span class="cnt" id="todayCnt"></span>
+      <div class="sec-desc">授权已过期或 30 天内到期、以及逾期未完成的待办，都会自动出现在这里</div>
+    </div>
+    <div class="card today-card">
+      <div class="today-hd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><path d="M12 3L22 20H2L12 3z"/><path d="M12 9v5M12 17.5v.01"/></svg>
+        <h2>待处理事项</h2><span class="n" id="todayN"></span>
+      </div>
+      <div class="todo-form">
+        <input type="text" id="todoText" placeholder="新增待办，如：联系王凯确认省交易中心授权续期" maxlength="80">
+        <input type="date" id="todoDate">
+        <button class="btn btn-pri" id="btnAddTodo" style="flex:0 0 auto"><span>添加</span></button>
+      </div>
+      <ul class="today-list" id="todayList"></ul>
+    </div>
+  </section>
+
+  <section id="license">
+    <div class="sec-hd"><h2>授权到期预警</h2><span class="cnt" id="licCnt"></span>
+      <div class="sec-desc">按项目聚合并去重展示；同一项目多台主机授权日期通常一致</div>
+    </div>
+    <div class="stat-row" id="licStats"></div>
+    <div class="lic-grid" id="licGrid"></div>
+  </section>
+
+  <section id="projects">
+    <div class="sec-hd"><h2>项目总览看板</h2><span class="cnt" id="projCnt"></span>
+      <div class="sec-desc">按项目编码聚合，展示最终用户、ISV、部署架构与主机构成</div>
+    </div>
+    <div class="stat-row" id="projStats"></div>
+    <div class="card card-pad" style="margin-bottom:12px" id="archChart"></div>
+    <div class="proj-grid" id="projGrid"></div>
+  </section>
+
+  <section id="hosts">
+    <div class="sec-hd"><h2>主机资源台账</h2><span class="cnt" id="hostCnt"></span>
+      <div class="sec-desc">点击任意一行查看完整字段（含磁盘、性能、优化参数）</div>
+    </div>
+    <div class="filters">
+      <input type="text" id="fSearch" placeholder="搜索项目 / IP / 主机名 / 用途 / 标识码">
+      <select id="fArch"><option value="">全部架构</option></select>
+      <select id="fCpu"><option value="">全部芯片</option></select>
+      <select id="fVer"><option value="">全部版本</option></select>
+    </div>
+    <div class="card tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>项目</th><th>资源序号</th><th>角色</th><th>IP</th><th>CPU</th><th>内存</th><th>操作系统</th><th>数据库版本</th><th>高可用</th>
+        </tr></thead>
+        <tbody id="hostBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="perf">
+    <div class="sec-hd"><h2>性能基线对比</h2><span class="cnt" id="perfCnt"></span>
+      <div class="sec-desc">仅统计已做过 pgbench 压测的主机；数值来自现场实测，用于横向对比与容量评估</div>
+    </div>
+    <div class="card card-pad" id="perfChart"></div>
+    <div class="card card-pad" style="margin-top:12px" id="ioChart"></div>
+    <p class="perf-note" id="perfNote"></p>
+  </section>
+
+  <footer>
+    hgdb-field-workbench · 数据存于本机浏览器 localStorage，不上传任何服务器<br>
+    存储键前缀 <code>wb_hgdbfw_</code> · 请定期用「导出」做本地备份
+  </footer>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script id="sampleData" type="application/json">
+{"meta":{"exportedAt":"2026-09-10","source":"示例数据（已脱敏，可公开）","note":"IP 中段打码、主机名为虚构、所有口令字段已移除，用于演示工作台功能"},"hosts":[{"id":"demo-p01-G1-S1-1","project":"hg45-示例交易中心-某云-张三N000001","seq":"G1-S1-1","eu":"某省公共资源交易中心","isv":"某软件有限公司","purpose":"某省公共资源交易系统","arch":"高可用","code":"demo-jyzx","role":"备（暂时）","installDate":"2025-11-21","dbid":"7575542466411471000","vendor":"鲲鹏","cloud":"某云","nic":"enp1s0","ip":"10.***.26.82/24","mac":"","fip":"100.***.3.170","vip":"10.***.26.109","cpuModel":"Kunpeng-920","cpuArch":"aarch64","cpuLogic":16,"threadsPerCore":1,"coresPerSocket":16,"sockets":1,"numa":1,"memTotal":32,"memAvail":null,"swap":0,"os":"Kylin V10 SP2 (Sword) aarch64","hostname":"ecs-demo-0001.novalocal","osUser":"highgo","osPass":"","locale":"en_US.UTF-8","dbVersion":"hgdb-45103","licenseExpiry":"2026-02-18","plugins":"","ha":"hghac-427","scope":"demo-jyzx","rwSplit":"-","backupTime":"23:30:00","backupKeep":"3","backupScript":"hgdb_backup_20241231_rebak.sh","disks":[{"usage":"数据盘","dev":"/dev/sdc","type":"HDD","lvm":"否","lv":"-","fs":"xfs","size":"500 GB","mount":"/data"},{"usage":"系统盘","dev":"/dev/vda","type":"HDD","lvm":"否","lv":"-","fs":"ext4","size":"40 GB","mount":"/"}],"dataDir":"/data/highgo/data","perf":{"write3k":"12.9 MB/s","read3k":"4.6 GB/s","write8m":"245 MB/s","lat1":6.5,"tps1Conn":1539.41,"tps1NoConn":1539.9,"lat2":25.03,"tps2Conn":7990.44,"tps2NoConn":7990.57},"tuning":{"sharedBuffers":"8GB","walBuffers":"16MB"},"pkg":""},{"id":"demo-p01-G1-S3-1","project":"hg45-示例交易中心-某云-张三N000001","seq":"G1-S3-1","eu":"某省公共资源交易中心","isv":"某软件有限公司","purpose":"某省公共资源交易系统","arch":"高可用","code":"demo-jyzx","role":"主（暂时）","installDate":"2025-11-21","dbid":"7575542466411471000","vendor":"鲲鹏","cloud":"某云","nic":"enp1s0","ip":"10.***.26.84/24","mac":"","fip":"100.***.11.167","vip":"","cpuModel":"Kunpeng-920","cpuArch":"aarch64","cpuLogic":16,"threadsPerCore":1,"coresPerSocket":16,"sockets":1,"numa":1,"memTotal":32,"memAvail":null,"swap":0,"os":"Kylin V10 SP2 (Sword) aarch64","hostname":"ecs-demo-0002.novalocal","osUser":"highgo","osPass":"","locale":"en_US.UTF-8","dbVersion":"hgdb-45103","licenseExpiry":"2026-02-18","plugins":"","ha":"hghac-427","scope":"demo-jyzx","rwSplit":"-","backupTime":"23:30:00","backupKeep":"3","backupScript":"hgdb_backup_20241231_rebak.sh","disks":[{"usage":"数据盘","dev":"/dev/sdc","type":"HDD","lvm":"否","lv":"-","fs":"xfs","size":"500 GB","mount":"/data"},{"usage":"系统盘","dev":"/dev/vda","type":"HDD","lvm":"否","lv":"-","fs":"ext4","size":"40 GB","mount":"/"}],"dataDir":"/data/highgo/data","perf":{"write3k":"13.0 MB/s","read3k":"4.8 GB/s","write8m":"255 MB/s","lat1":6.79,"tps1Conn":1472.38,"tps1NoConn":1472.8,"lat2":26.64,"tps2Conn":7506.58,"tps2NoConn":7506.71},"tuning":{"sharedBuffers":"8GB","walBuffers":"16MB"},"pkg":""},{"id":"demo-p05-1","project":"hg45-示例共青团-某云-李四N000002","seq":"1","eu":"某市委员会","isv":"某系统集成有限公司","purpose":"某单位门户网站","arch":"单机","code":"hgdb","role":"-","installDate":"2026-02-02","dbid":"","vendor":"","cloud":"某云","nic":"ens3","ip":"10.***.109.7/24","mac":"","fip":"","vip":"","cpuModel":"Hygon Dhyana Processor","cpuArch":"x86_64","cpuLogic":4,"threadsPerCore":2,"coresPerSocket":2,"sockets":1,"numa":1,"l1d":"64 KiB","l1i":"128 KiB","l2":"1 MiB","l3":"8 MiB","virt":"KVM / full","memTotal":8,"memAvail":8,"swap":0,"os":"Kylin V10 SP2 (Sword) x86_64","hostname":"sq-demo-0001.novalocal","osUser":"highgo","osPass":"","locale":"en_US.UTF-8","dbVersion":"hgdb-45X3","licenseExpiry":"2026-10-26","plugins":"","ha":"-","scope":"-","rwSplit":"-","backupTime":"23:30","backupKeep":"3","backupScript":"hgdb_backup_20241231_rebak.sh","disks":[{"usage":"数据盘","dev":"/dev/vdc","type":"HDD","lvm":"否","lv":"-","fs":"ext4","size":"100GB","mount":"/data"},{"usage":"系统盘","dev":"/dev/vda","type":"HDD","lvm":"否","lv":"-","fs":"ext4","size":"100GB","mount":"/"}],"dataDir":"实例：/data/highgo/data / 归档：/data/highgo/hgdbbak/archive / 备份：/data/highgo/hgdbbak","perf":{"write3k":"10.7 MB/s","read3k":"8.4 GB/s","write8m":"221 MB/s","lat1":5.825,"tps1Conn":1716.88,"tps1NoConn":1717.47,"lat2":73.885,"tps2Conn":2706.9,"tps2NoConn":2706.94},"tuning":{"maxConnections":"2000","sharedBuffers":"2GB","effectiveCacheSize":"6GB","maintenanceWorkMem":"512MB","checkpointCompletionTarget":"0.9","walBuffers":"16MB","defaultStatisticsTarget":"100","randomPageCost":"4","effectiveIoConcurrency":"2","workMem":"16MB","hugePages":"off","minWalSize":"2GB","maxWalSize":"8GB","maxWorkerProcesses":"4","maxParallelWorkersPerGather":"2","maxParallelWorkers":"4","maxParallelMaintenanceWorkers":"2"},"pkg":""},{"id":"demo-p07-G1-S1-1","project":"hg45-示例环境-某云-王五N000003","seq":"G1-S1-1","eu":"某市生态环境局","isv":"某科技股份有限公司","purpose":"某省污染源自动监控系统（地市版）","arch":"流复制","code":"hgdb01","role":"主","installDate":"2026-03-02","dbid":"7612497510997331000","vendor":"","cloud":"某云","nic":"enp3s0","ip":"172.***.28.39/24","mac":"","fip":"10.***.36.132","vip":"","cpuModel":"Kunpeng-920","cpuArch":"aarch64","cpuLogic":24,"threadsPerCore":1,"coresPerSocket":1,"sockets":24,"numa":2,"freqMax":2600,"l1d":"1.5 MiB","l1i":"1.5 MiB","l2":"12 MiB","l3":"768 MiB","memTotal":190,"memAvail":185,"swap":8,"os":"Kylin V10 SP3 (Lance) aarch64","hostname":"ecs-demo-sjk01.novalocal","osUser":"highgo","osPass":"","locale":"zh_CN.UTF-8","dbVersion":"hgdb-45X3","licenseExpiry":"2026-05-26","plugins":"PostGIS 340","ha":"stream","scope":"-","rwSplit":"-","backupTime":"23:30","backupKeep":"1","backupScript":"hgdb_backup_20241231_rebak.sh","disks":[{"usage":"数据盘","dev":"/dev/vdb","type":"SSD","lvm":"是","lv":"vg1-lv--data","fs":"ext4","size":"400GB","mount":"/data"},{"usage":"系统盘","dev":"/dev/vda","type":"SSD","lvm":"是","lv":"klas-root","fs":"xfs","size":"61GB","mount":"/"}],"dataDir":"实例：/data/highgo/data / 归档：/hgdbarch / 备份：/hgdbbak","perf":{"write3k":"10.6 MB/s","read3k":"7.3 GB/s","write8m":"621 MB/s","lat1":2.97,"tps1Conn":3366.73,"tps1NoConn":3368.42,"lat2":13.416,"tps2Conn":14907.78,"tps2NoConn":14907.93},"tuning":{"maxConnections":"2000","sharedBuffers":"48640MB","effectiveCacheSize":"145920MB","maintenanceWorkMem":"2GB","checkpointCompletionTarget":"0.9","walBuffers":"16MB","defaultStatisticsTarget":"100","randomPageCost":"1.1","effectiveIoConcurrency":"200","workMem":"24608kB","hugePages":"try","minWalSize":"2GB","maxWalSize":"8GB","maxWorkerProcesses":"24","maxParallelWorkersPerGather":"4","maxParallelWorkers":"24","maxParallelMaintenanceWorkers":"4"},"pkg":"hgdb-4.5-e94b212-20250227.aarch64.rpm"},{"id":"demo-p09-G0-S1-1","project":"hg45-示例城管局-某云-赵六N000004","seq":"G0-S1-1","eu":"某市城市管理局","isv":"某软件科技有限公司","purpose":"某市监测监管平台","arch":"单机","code":"","role":"-","installDate":"2026-03-18","dbid":"7618490460835096000","vendor":"","cloud":"某云","nic":"enp3s0","ip":"172.***.10.144/24","mac":"","fip":"","vip":"","cpuModel":"Kunpeng-920","cpuArch":"aarch64","cpuLogic":2,"threadsPerCore":1,"coresPerSocket":2,"sockets":1,"numa":1,"freqMax":2600,"l1d":"128 KiB","l1i":"128 KiB","l2":"1 MiB","l3":"32 MiB","memTotal":8,"memAvail":6.6,"swap":8,"os":"Kylin V10 SP3 (Lance) aarch64","hostname":"ec-demo-27","osUser":"highgo","osPass":"","locale":"zh_CN.UTF-8","dbVersion":"hgdb-45X3","licenseExpiry":"2027-03-17","plugins":"","ha":"-","scope":"-","rwSplit":"-","backupTime":"","backupKeep":"","backupScript":"","disks":[{"usage":"数据盘","dev":"/dev/vdb","type":"HDD","lvm":"是","lv":"vg1-lv--data","fs":"xfs","size":"700GB","mount":"/data"},{"usage":"系统盘","dev":"/dev/vda3","type":"HDD","lvm":"否","lv":"-","fs":"ext4","size":"31GB","mount":"/"}],"dataDir":"实例：/data/highgo/data / 归档：/hgdbarch / 备份：/hgdbbak","perf":{"write3k":"22.0 MB/s","read3k":"6.9 GB/s","write8m":"173 MB/s","lat1":7.461,"tps1Conn":1340.33,"tps1NoConn":1340.63,"lat2":111.738,"tps2Conn":1789.9,"tps2NoConn":1789.92},"tuning":{"maxConnections":"200","sharedBuffers":"1792MB","effectiveCacheSize":"5376MB","maintenanceWorkMem":"448MB","checkpointCompletionTarget":"0.9","walBuffers":"16MB","defaultStatisticsTarget":"100","randomPageCost":"4","effectiveIoConcurrency":"2","workMem":"8822KB","hugePages":"off","minWalSize":"2GB","maxWalSize":"8GB"},"pkg":"hgdb-4.5-e94b212-20250227.aarch64.rpm"}]}
+</script>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════
+   架构：数据层 → 计算层 → 渲染层，严格单向，渲染函数之间禁止互调
+   所有交互走 refreshAll() 统一调度，杜绝 A→B→A 调用环
+   ═══════════════════════════════════════════════════════════ */
+
+var K = { data:'wb_hgdbfw_dataset', todos:'wb_hgdbfw_todos', mask:'wb_hgdbfw_mask', handled:'wb_hgdbfw_handled' };
+var state = { hosts:[], todos:[], masked:true, handled:[], isSample:true };
+var TODAY = new Date(); TODAY.setHours(0,0,0,0);
+
+/* ── 数据层 ── */
+function lsGet(k, fb){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):fb; }catch(e){ return fb; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ toast('本地存储写入失败'); } }
+function loadState(){
+  var raw = lsGet(K.data, null);
+  if(raw && raw.hosts && raw.hosts.length){ state.hosts=raw.hosts; state.isSample=false; }
+  else { state.hosts = getSample(); state.isSample=true; }
+  state.todos   = lsGet(K.todos, getDefaultTodos());
+  state.masked  = lsGet(K.mask, true);
+  state.handled = lsGet(K.handled, []);
+}
+function saveHosts(){ lsSet(K.data, {hosts:state.hosts, savedAt:new Date().toISOString()}); }
+function getSample(){
+  try{ var d=JSON.parse(document.getElementById('sampleData').textContent);
+       return (d&&d.hosts&&d.hosts.length)?d.hosts:[]; }catch(e){ return []; }
+}
+function getDefaultTodos(){
+  var t=new Date(TODAY); t.setDate(t.getDate()-3);
+  return [{ id:'t1', text:'示例：确认省交易中心授权续期进展（该授权已过期）', due:iso(t), done:false }];
+}
+function iso(d){ var m=d.getMonth()+1,day=d.getDate();
+  return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day; }
+function parseDate(s){ if(!s) return null; var p=String(s).trim().split('-');
+  if(p.length!==3) return null; var d=new Date(+p[0],+p[1]-1,+p[2]);
+  return isNaN(d)?null:d; }
+function daysDiff(a,b){ return Math.round((a-b)/86400000); }
+
+/* ── 计算层 ── */
+function maskIp(ip){
+  if(!state.masked || !ip) return ip||'—';
+  return String(ip).replace(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/, '$1.***.$3.$4');
+}
+function maskSecret(v){
+  if(!v) return '—';
+  return state.masked ? '••••••••' : v;
+}
+function licStatus(exp){
+  if(!exp) return { key:'none', label:'未登记', days:null };
+  var d=parseDate(exp); if(!d) return { key:'none', label:'日期异常', days:null };
+  var n=daysDiff(d,TODAY);
+  if(n<0)   return { key:'danger', label:'已过期 '+(-n)+' 天', days:n };
+  if(n<=30) return { key:'warn',   label: n===0?'今天到期':('剩 '+n+' 天'), days:n };
+  return { key:'ok', label:'剩 '+n+' 天', days:n };
+}
+function groupProjects(){
+  var m={}, order=[];
+  state.hosts.forEach(function(h){
+    var k=h.project||'未归类';
+    if(!m[k]){ m[k]={name:k, eu:h.eu||'', isv:h.isv||'', purpose:h.purpose||'', arch:h.arch||'', hosts:[]}; order.push(k); }
+    if(h.eu && !m[k].eu) m[k].eu=h.eu;
+    if(h.isv && !m[k].isv) m[k].isv=h.isv;
+    if(h.purpose && !m[k].purpose) m[k].purpose=h.purpose;
+    if(h.arch && !m[k].arch) m[k].arch=h.arch;
+    m[k].hosts.push(h);
+  });
+  return order.map(function(k){ return m[k]; });
+}
+function groupLicenses(){
+  var m={}, order=[];
+  state.hosts.forEach(function(h){
+    var exp=h.licenseExpiry||''; if(!exp) return;
+    var k=(h.project||'未归类')+'|'+exp;
+    if(!m[k]){ m[k]={project:h.project||'未归类', eu:h.eu||'', expiry:exp, hosts:[]}; order.push(k); }
+    m[k].hosts.push(h);
+  });
+  return order.map(function(k){ return m[k]; })
+    .sort(function(a,b){ return (parseDate(a.expiry)||0)-(parseDate(b.expiry)||0); });
+}
+function todoStatus(t){
+  var d=parseDate(t.due);
+  if(!d) return { overdue:false, days:null };
+  var n=daysDiff(d,TODAY);
+  return { overdue:(n<0 && !t.done), days:n };
+}
+function perfHosts(){
+  return state.hosts.filter(function(h){ return h.perf && h.perf.tps1Conn; });
+}
+function uniq(arr){ var s={},o=[]; arr.forEach(function(v){ if(v&&!s[v]){s[v]=1;o.push(v);} }); return o; }
+
+/* ── 渲染层（彼此独立，禁止互调）── */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function renderHeader(){
+  var n=state.hosts.length, p=groupProjects().length;
+  document.getElementById('hdSub').textContent =
+    (state.isSample?'示例数据':'真实数据')+' · '+p+' 个项目 / '+n+' 台主机 · 更新于 '+iso(TODAY);
+  document.getElementById('maskLabel').textContent = state.masked?'脱敏开':'脱敏关';
+  document.getElementById('btnMask').className = 'btn'+(state.masked?' btn-on':'');
+  var b=document.getElementById('banner');
+  if(state.isSample){
+    b.style.display='block';
+    b.className='banner banner-info';
+    b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>'
+      +'<div>当前显示的是<b>脱敏示例数据</b>。点击右上「导入」选择你的 <code>data/real.json</code> 即可切换到真实台账；真实数据只存在本机浏览器，不会上传。</div>';
+  }else{
+    b.style.display='block';
+    b.className='banner banner-warn';
+    b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3L22 20H2L12 3z"/><path d="M12 9v5M12 17.5v.01"/></svg>'
+      +'<div>当前为<b>真实数据</b>。若本页面被部署到公网，请勿关闭「脱敏」开关；密码字段默认显示为 ••••。</div>';
+  }
+}
+
+function renderToday(){
+  var list=document.getElementById('todayList'), items=[];
+  groupLicenses().forEach(function(l){
+    var st=licStatus(l.expiry);
+    if(st.key==='danger'||st.key==='warn'){
+      var hk='lic|'+l.project+'|'+l.expiry;
+      if(state.handled.indexOf(hk)>-1) return;
+      items.push({ kind:'lic', key:hk, title:(l.eu||l.project)+' 数据库授权'+st.label,
+        meta:l.project+' · '+l.hosts.length+' 台主机 · 到期 '+l.expiry, overdue:st.key==='danger', act:true });
+    }
+  });
+  state.todos.forEach(function(t){
+    if(t.done) return;
+    var s=todoStatus(t);
+    if(!s.overdue && !(s.days!==null && s.days<=7)) return;
+    items.push({ kind:'todo', key:t.id, title:t.text,
+      meta:(s.overdue?('原定 '+t.due+'，已顺延至今天'):('截止 '+t.due)), overdue:!!s.overdue, act:false });
+  });
+  items.sort(function(a,b){ return (b.overdue?1:0)-(a.overdue?1:0); });
+
+  var n=items.length;
+  document.getElementById('todayCnt').textContent = n?('共 '+n+' 项'):'';
+  document.getElementById('todayN').textContent  = n?('待处理 '+n+' 项'):'全部处理完毕';
+  if(!n){
+    list.innerHTML='<li class="empty">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>'
+      +'今天没有待处理事项</li>';
+    return;
+  }
+  list.innerHTML = items.map(function(it){
+    var tag = it.overdue?'<span class="overdue-tag">逾期</span>':'<span class="due-tag">即将到期</span>';
+    var btn = it.act
+      ? '<button class="btn" data-act="handle" data-key="'+esc(it.key)+'">标记已跟进</button>'
+      : '<button class="btn" data-act="done" data-key="'+esc(it.key)+'">完成</button>';
+    return '<li class="today-item">'
+      +'<div class="ti-body"><div class="ti-title">'+tag+' '+esc(it.title)+'</div>'
+      +'<div class="ti-meta"><span>'+esc(it.meta)+'</span></div></div>'
+      +'<div class="ti-act">'+(it.act?btn+'<button class="btn" data-act="todo" data-key="'+esc(it.key)+'">加待办</button>':btn+'<button class="btn" data-act="del" data-key="'+esc(it.key)+'">删除</button>')+'</div>'
+      +'</li>';
+  }).join('');
+}
+
+function ringSvg(st, label){
+  var pct = st.days===null ? 0 : Math.max(0, Math.min(1, st.days/365));
+  var color = st.key==='danger'?'#E24B4A' : st.key==='warn'?'#EF9F27' : st.key==='ok'?'#639922' : '#B4B2A9';
+  var R=20, C=2*Math.PI*R, off=C*(1-pct);
+  return '<svg class="ring" width="48" height="48" viewBox="0 0 48 48">'
+    +'<circle cx="24" cy="24" r="'+R+'" fill="none" stroke="#EDEFF2" stroke-width="5"/>'
+    +'<circle cx="24" cy="24" r="'+R+'" fill="none" stroke="'+color+'" stroke-width="5" stroke-linecap="round"'
+    +' stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 24 24)"/>'
+    +'<text x="24" y="25" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="600" fill="'+color+'">'
+    +(st.days===null?'—':(st.days<0?'!':st.days))+'</text></svg>';
+}
+function renderLicense(){
+  var ls=groupLicenses();
+  var c={danger:0,warn:0,ok:0};
+  ls.forEach(function(l){ c[licStatus(l.expiry).key]++; });
+  document.getElementById('licCnt').textContent = ls.length?('已登记 '+ls.length+' 项'):'';
+  document.getElementById('licStats').innerHTML =
+      stat(c.danger,'已过期','danger')+stat(c.warn,'30 天内到期','warn')
+    + stat(c.ok,'有效期充足','ok')
+    + stat(state.hosts.filter(function(h){return !h.licenseExpiry;}).length,'未登记日期','');
+  if(!ls.length){
+    document.getElementById('licGrid').innerHTML='<div class="empty">暂无授权日期记录</div>'; return;
+  }
+  document.getElementById('licGrid').innerHTML = ls.map(function(l){
+    var st=licStatus(l.expiry);
+    var hk='lic|'+l.project+'|'+l.expiry;
+    var done=state.handled.indexOf(hk)>-1;
+    return '<div class="lic-item st-'+st.key+'"'+(done?' style="opacity:.55"':'')+'>'
+      + ringSvg(st)
+      + '<div class="lic-body">'
+      + '<div class="lic-proj">'+esc(l.eu||l.project)+'</div>'
+      + '<div class="lic-meta">'+esc(l.project)+'</div>'
+      + '<div class="lic-date">到期 '+esc(l.expiry)+' · '+l.hosts.length+' 台主机</div>'
+      + '<div class="lic-flag">'+esc(st.label)+(done?' · 已标记跟进':'')+'</div>'
+      + '</div></div>';
+  }).join('');
+}
+function stat(v,k,cls){
+  return '<div class="stat'+(cls?' '+cls:'')+'"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>';
+}
+
+function barChart(rows, color, unit){
+  if(!rows.length) return '<div class="empty">暂无数据</div>';
+  var W=680, rowH=30, H=rows.length*rowH+8;
+  var barX=170, barMaxW=W-barX-80;
+  var max=Math.max.apply(null, rows.map(function(r){return r.v;}).concat([1]));
+  var parts=rows.map(function(r,i){
+    var y=i*rowH+8, bw=Math.max(3,(r.v/max)*barMaxW);
+    return '<text x="0" y="'+(y+12)+'" font-size="12" fill="#5F6B7A">'+esc(r.k.length>18?r.k.slice(0,17)+'…':r.k)+'</text>'
+      +'<rect x="'+barX+'" y="'+(y+2)+'" width="'+bw.toFixed(1)+'" height="12" rx="3" fill="'+color+'"/>'
+      +'<text x="'+W+'" y="'+(y+12)+'" text-anchor="end" font-size="12" font-weight="600" fill="#1F2328">'+r.v+(unit||'')+'</text>';
+  }).join('');
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'
+    +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;min-width:480px" role="img">'+parts+'</svg></div>';
+}
+function renderProjects(){
+  var ps=groupProjects();
+  document.getElementById('projCnt').textContent = ps.length+' 个项目';
+  var hosts=state.hosts.length;
+  var haCount={}; state.hosts.forEach(function(h){ var k=h.arch||'未标注'; haCount[k]=(haCount[k]||0)+1; });
+  document.getElementById('projStats').innerHTML =
+      stat(ps.length,'项目数','')+stat(hosts,'主机数','')
+    + stat(uniq(state.hosts.map(function(h){return h.cpuArch;}).filter(Boolean)).length,'CPU 架构种类','')
+    + stat(uniq(state.hosts.map(function(h){return h.cloud;}).filter(Boolean)).length,'云厂商数','');
+  var archRows=Object.keys(haCount).map(function(k){return {k:k,v:haCount[k]};})
+    .sort(function(a,b){return b.v-a.v;});
+  document.getElementById('archChart').innerHTML =
+    '<h3 style="margin-bottom:10px">部署架构分布</h3>'+barChart(archRows,'#378ADD',' 台');
+
+  document.getElementById('projGrid').innerHTML = ps.map(function(p){
+    var exp=(p.hosts.find(function(h){return h.licenseExpiry;})||{}).licenseExpiry||'';
+    var st=exp?licStatus(exp):null;
+    var badge = st?('<span class="badge badge-'+st.key+'">'+esc(st.label)+'</span>'):'';
+    var hostList=p.hosts.map(function(h){
+      var role=h.role||''; var cls=/主/.test(role)?'dot-main':(/备/.test(role)?'dot-standby':'dot-other');
+      return '<li><span class="dot '+cls+'"></span><span class="code">'+esc(h.seq||'—')+'</span>'
+        +'<span class="mono">'+esc(maskIp(h.ip))+'</span>'
+        +'<span style="color:var(--text3)">'+esc(role||'—')+'</span></li>';
+    }).join('');
+    return '<div class="proj-card">'
+      +'<div class="proj-name">'+esc(p.name)+'</div>'
+      +'<div class="proj-eu">'+esc(p.eu||'—')+(p.isv?(' · ISV：'+esc(p.isv)):'')+'</div>'
+      +'<div class="proj-row"><span class="badge badge-gray">'+esc(p.arch||'未标注')+'</span>'+badge+'</div>'
+      +'<div class="proj-row"><span class="proj-kv">用途 <b>'+esc(p.purpose||'—')+'</b></span></div>'
+      +'<ul class="proj-hosts">'+hostList+'</ul>'
+      +'</div>';
+  }).join('');
+}
+
+function renderHosts(){
+  var q=(document.getElementById('fSearch').value||'').trim().toLowerCase();
+  var fa=document.getElementById('fArch').value, fc=document.getElementById('fCpu').value, fv=document.getElementById('fVer').value;
+  var rows=state.hosts.filter(function(h){
+    if(fa && (h.arch||'')!==fa) return false;
+    if(fc && (h.cpuModel||'')!==fc) return false;
+    if(fv && (h.dbVersion||'')!==fv) return false;
+    if(!q) return true;
+    return [h.project,h.seq,h.ip,h.hostname,h.purpose,h.code,h.eu,h.cpuModel]
+      .join(' ').toLowerCase().indexOf(q)>-1;
+  });
+  document.getElementById('hostCnt').textContent = rows.length+' / '+state.hosts.length+' 台';
+  var body=document.getElementById('hostBody');
+  if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="empty">没有匹配的主机</td></tr>'; return; }
+  body.innerHTML = rows.map(function(h){
+    var cpu = h.cpuLogic ? (h.cpuLogic+' 核') : '—';
+    var mem = h.memTotal ? (h.memTotal+' GB') : '—';
+    return '<tr data-id="'+esc(h.id)+'">'
+      +'<td><div>'+esc((h.project||'').replace(/^\d+-/,''))+'</div><div class="cell-sub">'+esc(h.eu||'')+'</div></td>'
+      +'<td class="mono">'+esc(h.seq||'—')+'</td>'
+      +'<td>'+esc(h.role||'—')+'</td>'
+      +'<td class="mono">'+esc(maskIp(h.ip))+(h.fip?'<div class="cell-sub">FIP '+esc(maskIp(h.fip))+'</div>':'')+'</td>'
+      +'<td><div>'+cpu+'</div><div class="cell-sub">'+esc(h.cpuModel||'')+'</div></td>'
+      +'<td class="mono">'+mem+'</td>'
+      +'<td><div style="font-size:12px">'+esc(h.os||'—')+'</div><div class="cell-sub">'+esc(h.hostname||'')+'</div></td>'
+      +'<td class="mono">'+esc(h.dbVersion||'—')+(h.plugins?'<div class="cell-sub">'+esc(h.plugins)+'</div>':'')+'</td>'
+      +'<td>'+esc(h.ha||'—')+'</td></tr>';
+  }).join('');
+}
+function renderFilters(){
+  fill('fArch', uniq(state.hosts.map(function(h){return h.arch;}).filter(Boolean)));
+  fill('fCpu',  uniq(state.hosts.map(function(h){return h.cpuModel;}).filter(Boolean)));
+  fill('fVer',  uniq(state.hosts.map(function(h){return h.dbVersion;}).filter(Boolean)));
+}
+function fill(id, arr){
+  var el=document.getElementById(id), cur=el.value;
+  el.innerHTML='<option value="">'+el.options[0].text+'</option>'
+    + arr.map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('');
+  el.value=cur;
+}
+
+function renderPerf(){
+  var hs=perfHosts();
+  document.getElementById('perfCnt').textContent = hs.length?('已压测 '+hs.length+' 台'):'';
+  var box=document.getElementById('perfChart'), io=document.getElementById('ioChart');
+  if(!hs.length){
+    box.innerHTML='<div class="empty">暂无 pgbench 压测数据</div>'; io.innerHTML='';
+    document.getElementById('perfNote').textContent=''; return;
+  }
+  var sorted=hs.slice().sort(function(a,b){ return b.perf.tps1Conn-a.perf.tps1Conn; });
+  var tps=sorted.map(function(h){ return { k:shortName(h), v:Math.round(h.perf.tps1Conn) }; });
+  var tps2=sorted.filter(function(h){return h.perf.tps2Conn;})
+                  .sort(function(a,b){ return b.perf.tps2Conn-a.perf.tps2Conn; })
+                  .map(function(h){ return { k:shortName(h), v:Math.round(h.perf.tps2Conn) }; });
+  box.innerHTML='<h3 style="margin-bottom:4px">pgbench TPS（10 客户端 / 1000 事务）</h3>'
+    +'<div class="perf-legend"><span><i class="sw" style="background:#378ADD"></i>数值越高越好</span></div>'
+    + barChart(tps,'#378ADD','');
+  io.innerHTML='<h3 style="margin-bottom:4px">pgbench TPS（200 并发 / 120 秒）</h3>'
+    +'<div class="perf-legend"><span><i class="sw" style="background:#7F77DD"></i>并发压测下的吞吐</span></div>'
+    + (tps2.length?barChart(tps2,'#7F77DD',''):'<div class="empty">暂无 200 并发数据</div>');
+  var best=sorted[0];
+  document.getElementById('perfNote').textContent =
+    '当前基线最高：'+shortName(best)+'（'+Math.round(best.perf.tps1Conn)+' TPS'
+    +(best.perf.lat1?('，延迟 '+best.perf.lat1+' ms'):'')+'）。'
+    +'对比可见：SSD + LVM 的主机大块写入普遍在 600 MB/s 以上，而 HDD 机型多在 90–260 MB/s 区间，'
+    +'这直接影响 checkpoint 与批量导入表现。';
+}
+function shortName(h){
+  var p=(h.project||'').replace(/^\d+-/,'');
+  var parts=p.split('-');
+  return (parts[1]||p).slice(0,10)+(h.seq?('/'+h.seq):'');
+}
+
+function renderHostDetail(h){
+  var st=h.licenseExpiry?licStatus(h.licenseExpiry):null;
+  var disks=(h.disks&&h.disks.length)?h.disks:[];
+  var t=h.tuning||{}, p=h.perf||{};
+  return '<div class="modal-hd"><h2>'+esc(h.seq||'—')+' · '+esc(maskIp(h.ip))+'</h2>'
+    +'<button class="x" data-act="close" aria-label="关闭">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="modal-bd">'
+    + (st?('<div class="banner '+(st.key==='danger'?'banner-warn':(st.key==='warn'?'banner-warn':'banner-info'))+'">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+        +'<div>数据库授权 <b>'+esc(h.licenseExpiry)+'</b> · '+esc(st.label)+'</div></div>'):'')
+    + grp('项目信息', [
+        ['项目编码', h.project], ['资源序号', h.seq], ['最终用户', h.eu], ['ISV', h.isv],
+        ['用途', h.purpose], ['部署架构', h.arch], ['标识码', h.code], ['主备角色', h.role],
+        ['安装时间', h.installDate], ['DBID', h.dbid, true], ['云厂商', h.cloud], ['服务器厂商', h.vendor]
+      ])
+    + grp('网络', [
+        ['网卡', h.nic], ['IP', maskIp(h.ip), true], ['MAC', h.mac, true],
+        ['浮动 IP', maskIp(h.fip), true], ['VIP', maskIp(h.vip), true]
+      ])
+    + grp('CPU 与内存', [
+        ['型号', h.cpuModel], ['架构', h.cpuArch], ['逻辑 CPU', h.cpuLogic?h.cpuLogic+' 核':''],
+        ['线程/核', h.threadsPerCore], ['核/座', h.coresPerSocket], ['座数', h.sockets], ['NUMA', h.numa],
+        ['主频', h.freqMax?h.freqMax+' MHz':''],
+        ['L1d / L1i', [h.l1d,h.l1i].filter(Boolean).join(' / ')], ['L2 / L3', [h.l2,h.l3].filter(Boolean).join(' / ')],
+        ['虚拟化', h.virt],
+        ['物理内存', h.memTotal?h.memTotal+' GB':''], ['可用内存', h.memAvail?h.memAvail+' GB':''], ['Swap', h.swap!=null?h.swap+' GB':'']
+      ])
+    + grp('系统与数据库', [
+        ['操作系统', h.os], ['主机名', h.hostname], ['OS 用户', h.osUser], ['OS 密码', maskSecret(h.osPass), true],
+        ['locale', h.locale], ['数据库版本', h.dbVersion], ['扩展插件', h.plugins],
+        ['授权到期', h.licenseExpiry], ['高可用', h.ha], ['scope', h.scope],
+        ['读写分离', h.rwSplit+(h.rwPort?(' (:'+h.rwPort+')'):'')],
+        ['备份时间', h.backupTime], ['保留份数', h.backupKeep], ['备份脚本', h.backupScript],
+        ['数据目录', h.dataDir], ['安装包', h.pkg]
+      ])
+    + (disks.length?('<div class="dl-group"><h3>磁盘</h3><table class="disk-tbl"><thead><tr>'
+        +'<th>用途</th><th>设备</th><th>类型</th><th>LVM</th><th>逻辑卷</th><th>文件系统</th><th>大小</th><th>挂载点</th></tr></thead><tbody>'
+        + disks.map(function(d){ return '<tr><td>'+esc(d.usage)+'</td><td class="mono">'+esc(d.dev)+'</td><td>'+esc(d.type)+'</td>'
+            +'<td>'+esc(d.lvm)+'</td><td>'+esc(d.lv)+'</td><td>'+esc(d.fs)+'</td><td>'+esc(d.size)+'</td><td class="mono">'+esc(d.mount)+'</td></tr>'; }).join('')
+        +'</tbody></table></div>'):'')
+    + (p.tps1Conn?grp('性能基线（pgbench）', [
+        ['落盘写 3KB', p.write3k], ['随机读 3KB', p.read3k], ['大块写 8MB', p.write8m],
+        ['延迟（10 客户端）', p.lat1+' ms'], ['TPS 含连接', p.tps1Conn], ['TPS 不含连接', p.tps1NoConn],
+        ['延迟（200 并发）', p.lat2?p.lat2+' ms':''], ['TPS 含连接', p.tps2Conn], ['TPS 不含连接', p.tps2NoConn]
+      ]):'')
+    + (Object.keys(t).length?grp('数据库优化参数', Object.keys(t).map(function(k){
+        return [tuneLabel(k), t[k], true];
+      })):'')
+    +'</div>';
+}
+function tuneLabel(k){
+  var m={maxConnections:'max_connections',sharedBuffers:'shared_buffer',effectiveCacheSize:'effective_cache_size',
+    maintenanceWorkMem:'maintenance_work_mem',checkpointCompletionTarget:'checkpoint_completion_target',
+    walBuffers:'wal_buffers',defaultStatisticsTarget:'default_statistics_target',randomPageCost:'random_page_cost',
+    effectiveIoConcurrency:'effective_io_concurrency',workMem:'work_mem',hugePages:'huge_pages',
+    minWalSize:'min_wal_size',maxWalSize:'max_wal_size',maxWorkerProcesses:'max_worker_processes',
+    maxParallelWorkersPerGather:'max_parallel_workers_per_gather',maxParallelWorkers:'max_parallel_workers',
+    maxParallelMaintenanceWorkers:'max_parallel_maintenance_workers'};
+  return m[k]||k;
+}
+function grp(title, pairs){
+  var rows=pairs.filter(function(x){ return x[1]!=='' && x[1]!=null && x[1]!=='—'; })
+    .map(function(x){ return '<dt>'+esc(x[0])+'</dt><dd'+(x[2]?' class="mono"':'')+'>'+esc(x[1])+'</dd>'; }).join('');
+  if(!rows) return '';
+  return '<div class="dl-group"><h3>'+esc(title)+'</h3><dl class="dl">'+rows+'</dl></div>';
+}
+
+/* 布局同步：不读业务数据，不涉及渲染调用，可安全挂在刷新末尾 */
+function syncNavTop(){
+  var h=document.querySelector('header');
+  if(h && h.offsetHeight) document.documentElement.style.setProperty('--navh', h.offsetHeight+'px');
+}
+
+/* ── 统一刷新入口（唯一调度点）── */
+function refreshAll(){
+  renderHeader(); renderFilters(); renderToday();
+  renderLicense(); renderProjects(); renderHosts(); renderPerf();
+  syncNavTop();
+}
+
+/* ── 事件层：改数据 → save → refreshAll ── */
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='show';
+  setTimeout(function(){ t.className=''; },2200);
+}
+function openModal(html){
+  document.getElementById('modal').innerHTML=html;
+  document.getElementById('mask').className='mask open';
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  document.getElementById('mask').className='mask';
+  document.getElementById('modal').innerHTML='';
+  document.body.style.overflow='';
+}
+
+document.addEventListener('click', function(e){
+  var nav=e.target.closest('.nav-btn');
+  if(nav){
+    document.querySelectorAll('.nav-btn').forEach(function(b){ b.className='nav-btn'; });
+    nav.className='nav-btn act';
+    var el=document.getElementById(nav.getAttribute('data-go'));
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+  var act=e.target.closest('[data-act]');
+  if(act){
+    var a=act.getAttribute('data-act'), key=act.getAttribute('data-key');
+    if(a==='close'){ closeModal(); return; }
+    if(a==='handle'){
+      if(state.handled.indexOf(key)<0) state.handled.push(key);
+      lsSet(K.handled,state.handled); toast('已标记为跟进'); refreshAll(); return;
+    }
+    if(a==='todo'){
+      var p=key.split('|');
+      state.todos.push({ id:'t'+Date.now(), text:'跟进授权续期：'+p[1], due:iso(TODAY), done:false });
+      lsSet(K.todos,state.todos); toast('已加入今天要处理'); refreshAll(); return;
+    }
+    if(a==='done'||a==='del'){
+      state.todos=state.todos.filter(function(t){ return t.id!==key; });
+      lsSet(K.todos,state.todos); toast(a==='done'?'已完成':'已删除'); refreshAll(); return;
+    }
+  }
+  var tr=e.target.closest('#hostBody tr');
+  if(tr){
+    var host=state.hosts.find(function(h){ return h.id===tr.getAttribute('data-id'); });
+    if(host) openModal(renderHostDetail(host));
+    return;
+  }
+  if(e.target.id==='mask') closeModal();
+});
+
+document.getElementById('btnMask').addEventListener('click', function(){
+  state.masked=!state.masked; lsSet(K.mask,state.masked);
+  toast(state.masked?'已开启脱敏显示':'已关闭脱敏，敏感信息明文可见'); refreshAll();
+});
+document.getElementById('btnAddTodo').addEventListener('click', addTodo);
+document.getElementById('todoText').addEventListener('keydown', function(e){ if(e.key==='Enter') addTodo(); });
+function addTodo(){
+  var el=document.getElementById('todoText'), v=el.value.trim();
+  if(!v){ el.focus(); return; }
+  var d=document.getElementById('todoDate').value||iso(TODAY);
+  state.todos.push({ id:'t'+Date.now(), text:v, due:d, done:false });
+  lsSet(K.todos,state.todos); el.value=''; document.getElementById('todoDate').value='';
+  toast('已添加'); refreshAll();
+}
+['fSearch','fArch','fCpu','fVer'].forEach(function(id){
+  var el=document.getElementById(id);
+  el.addEventListener('input', renderHosts);
+  el.addEventListener('change', renderHosts);
+});
+document.getElementById('btnExport').addEventListener('click', function(){
+  var payload={ exportedAt:new Date().toISOString(), source:state.isSample?'示例数据':'真实数据',
+    hosts:state.hosts, todos:state.todos };
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='hgdb-workbench-'+iso(TODAY)+'.json';
+  a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+  toast('已导出备份');
+});
+document.getElementById('btnImport').addEventListener('click', function(){
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change', function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      var hosts=Array.isArray(d)?d:(d.hosts||[]);
+      if(!hosts.length) throw new Error('empty');
+      state.hosts=hosts; state.isSample=false; saveHosts();
+      if(d.todos && d.todos.length){ state.todos=d.todos; lsSet(K.todos,state.todos); }
+      toast('已导入 '+hosts.length+' 台主机'); refreshAll();
+    }catch(err){ toast('导入失败：文件不是有效的 JSON'); }
+  };
+  r.readAsText(f,'utf-8'); e.target.value='';
+});
+document.getElementById('btnReset').addEventListener('click', function(){
+  if(!confirm('确定清空当前数据并恢复为脱敏示例数据吗？\n\n你的待办、已跟进标记都会被清除。建议先点「导出」做备份。')) return;
+  if(!confirm('再次确认：此操作不可撤销，是否继续？')) return;
+  localStorage.removeItem(K.data); localStorage.removeItem(K.todos); localStorage.removeItem(K.handled);
+  state.hosts=getSample(); state.isSample=true;
+  state.todos=getDefaultTodos(); state.handled=[];
+  lsSet(K.todos,state.todos); toast('已恢复示例数据'); refreshAll();
+});
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+window.addEventListener('resize', syncNavTop);
+
+/* ── 初始化：加载 → 状态 → 一次性全量渲染 ── */
+document.addEventListener('DOMContentLoaded', function(){
+  var d=new Date(TODAY); d.setDate(d.getDate()+3);
+  document.getElementById('todoDate').value=iso(d);
+  loadState();
+  refreshAll();
+});
+</script>
+</body>
+</html>
