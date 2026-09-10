@@ -196,6 +196,28 @@ tbody tr:hover{background:var(--primary-bg)}
 .disk-tbl th{position:static;background:var(--bg)}
 .disk-tbl td,.disk-tbl th{padding:6px 8px}
 
+/* ── Host form（录入/编辑） ── */
+.modal-fm{max-width:880px}
+.modal-hd{flex-wrap:wrap}
+.modal-hd .hd-acts{display:flex;gap:6px;flex-shrink:0;align-items:center}
+.modal-ft{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);justify-content:flex-end;background:var(--card)}
+.fm-sec{margin-bottom:18px}
+.fm-sec:last-child{margin-bottom:0}
+.fm-sec>h3{font-size:12px;color:var(--text3);letter-spacing:.4px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.fm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px}
+.fm-f label{display:block;font-size:11px;color:var(--text3);margin-bottom:3px}
+.fm-f input{width:100%;min-height:38px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--card)}
+.fm-f input:focus{outline:none;border-color:var(--primary-line);box-shadow:0 0 0 2px var(--primary-bg)}
+.fm-req label::after{content:" *";color:var(--danger)}
+.fm-disk-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.fm-disk{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fm-disk input{min-width:0;min-height:34px;padding:0 8px;border:1px solid var(--border2);border-radius:6px;font-size:14px}
+.fm-disk input:focus{outline:none;border-color:var(--primary-line)}
+@media(min-width:769px){
+  .fm-grid{grid-template-columns:repeat(3,1fr)}
+  .fm-disk{grid-template-columns:1.1fr 1.1fr .8fr .7fr .8fr .7fr .8fr 1fr}
+}
+
 /* ── Toast ── */
 #toast{
   position:fixed;left:50%;transform:translateX(-50%);bottom:32px;z-index:200;
@@ -335,7 +357,11 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-
 
   <section id="hosts" data-page-node-id="WldhqtOHI9MDSFVoryk0J0">
     <div class="sec-hd" data-page-node-id="rL07yP5tYBGT4z2tjMAYP9"><h2 data-page-node-id="sHugwoKfDgeZzarV7Y0pYl">主机资源台账</h2><span class="cnt" id="hostCnt" data-page-node-id="JUG6By2Vm4oBhy0uCAEm2x"></span>
-      <div class="sec-desc" data-page-node-id="3SemU1xON7tleKtj2jRaBw">点击任意一行查看完整字段（含磁盘、性能、优化参数）</div>
+      <button class="btn btn-pri" data-act="newHost" style="margin-left:auto;align-self:center" title="录入新主机">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>新增主机</span>
+      </button>
+      <div class="sec-desc" data-page-node-id="3SemU1xON7tleKtj2jRaBw">点击任意一行查看完整字段（含磁盘、性能、优化参数）；支持「新增主机」在线录入或对已有记录「编辑 / 删除」</div>
     </div>
     <div class="filters" data-page-node-id="cBCGDArLeDRNxpCfk0ormX">
       <input type="text" id="fSearch" placeholder="搜索项目 / IP / 主机名 / 用途 / 标识码" data-page-node-id="lgq9N2bJAeKaI7wf984f4f">
@@ -384,6 +410,9 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-
 
 var K = { data:'wb_hgdbfw_dataset', todos:'wb_hgdbfw_todos', mask:'wb_hgdbfw_mask', handled:'wb_hgdbfw_handled' };
 var state = { hosts:[], todos:[], masked:true, handled:[], isSample:true };
+var formEditId = null;   // 当前表单正在编辑的主机 id；null 表示新增
+var TUNE_FIELDS = ['sharedBuffers','walBuffers','workMem','effectiveCacheSize','maintenanceWorkMem',
+  'maxConnections','minWalSize','maxWalSize','checkpointCompletionTarget','defaultStatisticsTarget','hugePages'];
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 
 /* ── 数据层 ── */
@@ -698,6 +727,14 @@ function renderHostDetail(h){
   var disks=(h.disks&&h.disks.length)?h.disks:[];
   var t=h.tuning||{}, p=h.perf||{};
   return '<div class="modal-hd"><h2>'+esc(h.seq||'—')+' · '+esc(maskIp(h.ip))+'</h2>'
+    +'<div class="hd-acts">'
+    +'<button class="btn" data-act="edit" data-key="'+esc(h.id)+'" title="编辑该主机">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 014 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>'
+    +'<span>编辑</span></button>'
+    +'<button class="btn btn-danger" data-act="delHost" data-key="'+esc(h.id)+'" title="删除该主机">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13h10l1-13"/></svg>'
+    +'<span>删除</span></button>'
+    +'</div>'
     +'<button class="x" data-act="close" aria-label="关闭">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'
     +'<div class="modal-bd">'
@@ -761,6 +798,171 @@ function grp(title, pairs){
   return '<div class="dl-group"><h3>'+esc(title)+'</h3><dl class="dl">'+rows+'</dl></div>';
 }
 
+/* ── 录入表单（事件层）：渲染表单 → 收集 → 保存，保存后统一走 refreshAll ── */
+function fmSec(title, inner){
+  return '<div class="fm-sec"><h3>'+esc(title)+'</h3>'+inner+'</div>';
+}
+function diskRowHtml(d){
+  d=d||{};
+  function g(n,ph){ return '<input data-df="'+n+'" value="'+esc(d[n]||'')+'" placeholder="'+esc(ph||'')+'">'; }
+  return '<div class="fm-disk-row"><div class="fm-disk">'
+    + g('usage','用途 如 数据盘') + g('dev','/dev/sdc') + g('type','HDD/SSD') + g('lvm','LVM 是/否')
+    + g('lv','逻辑卷') + g('fs','xfs') + g('size','500 GB') + g('mount','/data')
+    + '</div><button class="x" data-act="diskDel" aria-label="删除该磁盘" title="删除该磁盘" style="width:32px;height:32px">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:15px;height:15px"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>';
+}
+function renderHostForm(h){
+  h = h||{};
+  function v(n){ return h[n]!=null ? h[n] : ''; }
+  function f(n,label,ph,type,req,list){
+    return '<div class="fm-f'+(req?' fm-req':'')+'"><label>'+esc(label)+'</label>'
+      +'<input data-f="'+n+'" type="'+(type||'text')+'" value="'+esc(v(n))+'"'
+      +(ph?' placeholder="'+esc(ph)+'"':'')+(list?' list="'+list+'"':'')+'></div>';
+  }
+  function fn(n,label,ph){ return f(n,label,ph,'number'); }
+  function dl(id,arr){
+    return '<datalist id="'+id+'">'+arr.map(function(x){ return '<option value="'+esc(x)+'">'; }).join('')+'</datalist>';
+  }
+  var projects=uniq(state.hosts.map(function(x){ return x.project; }).filter(Boolean));
+  var eus=uniq(state.hosts.map(function(x){ return x.eu; }).filter(Boolean));
+  var isvs=uniq(state.hosts.map(function(x){ return x.isv; }).filter(Boolean));
+  var archs=uniq(['单机','主备','高可用','集群'].concat(state.hosts.map(function(x){ return x.arch; }).filter(Boolean)));
+  var t=h.tuning||{}, p=h.perf||{};
+  var disks=(h.disks&&h.disks.length)?h.disks:[{}];
+
+  return '<div class="modal-hd"><h2>'+(h.id?'编辑主机':'新增主机')+'</h2>'
+    +'<button class="x" data-act="close" aria-label="关闭">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="modal-bd">'
+    +'<div class="sec-desc" style="margin-bottom:12px">项目级信息（最终用户 / ISV / 用途 / 架构）按项目填一次即可，同一项目后续主机可留空。带 <b style="color:var(--danger)">*</b> 为必填；数据只存本机浏览器。</div>'
+    + dl('fmProjects',projects)+dl('fmEu',eus)+dl('fmIsv',isvs)+dl('fmArch',archs)
+    + fmSec('① 项目基本信息','<div class="fm-grid">'
+        + f('project','项目编码','如 hg45-客户名-项目名-联系人N001',null,true,'fmProjects')
+        + f('code','标识码','项目英文缩写')
+        + f('seq','资源序号','如 G1-S1-1')
+        + f('eu','最终用户','','',false,'fmEu')
+        + f('isv','ISV 软件开发商','','',false,'fmIsv')
+        + f('purpose','业务系统用途')
+        + f('arch','部署架构','','',false,'fmArch')
+        + f('role','主备角色','如 主（暂时） / 备（暂时）')
+        + f('installDate','安装时间','','date')
+        + f('licenseExpiry','授权到期','YYYY-MM-DD','date')
+      +'</div>')
+    + fmSec('② 操作系统与数据库','<div class="fm-grid">'
+        + f('os','操作系统','如 Kylin V10 SP2 aarch64')
+        + f('hostname','主机名')
+        + f('osUser','OS 用户','如 highgo')
+        + f('osPass','OS 密码','编辑时留空表示不修改','password')
+        + f('dbVersion','数据库版本','如 hgdb-45103')
+        + f('plugins','扩展插件')
+        + f('ha','高可用组件','如 hghac-427')
+        + f('dataDir','数据目录','如 /data/highgo/data')
+        + f('dbid','DBID')
+      +'</div>')
+    + fmSec('③ CPU 与内存 / 网络','<div class="fm-grid">'
+        + f('cpuModel','CPU 型号','如 Kunpeng-920')
+        + f('cpuArch','CPU 架构','x86_64 / aarch64')
+        + fn('cpuLogic','逻辑 CPU 核数','16')
+        + fn('memTotal','内存总量 (GB)','32')
+        + f('nic','网卡','如 enp1s0')
+        + f('ip','业务 IP','如 10.246.26.84/24')
+        + f('fip','浮动 IP')
+        + f('vip','VIP')
+        + f('mac','MAC 地址')
+      +'</div>')
+    + fmSec('④ 磁盘（可多块，留空的行会被忽略）',
+        '<div id="diskRows">'+disks.map(diskRowHtml).join('')+'</div>'
+        +'<button class="btn" data-act="diskAdd" type="button">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>添加一块磁盘</span></button>')
+    + fmSec('⑤ 性能基线（pgbench，选填）','<div class="fm-grid">'
+        + f('p_write3k','落盘写 3KB','如 12.9 MB/s')
+        + f('p_read3k','随机读 3KB','如 4.6 GB/s')
+        + f('p_write8m','大块写 8MB','如 245 MB/s')
+        + f('p_tps1Conn','TPS（10 客户端）','如 1539.41','number')
+        + f('p_tps1NoConn','TPS 不含连接','如 1539.9','number')
+        + f('p_lat1','延迟 10 客户端 (ms)','如 6.5','number')
+        + f('p_tps2Conn','TPS（200 并发）','','number')
+        + f('p_tps2NoConn','TPS 不含连接（200 并发）','','number')
+        + f('p_lat2','延迟 200 并发 (ms)','','number')
+      +'</div>')
+    + fmSec('⑥ 数据库优化参数（选填）','<div class="fm-grid">'
+        + TUNE_FIELDS.map(function(k){
+            return '<div class="fm-f"><label>'+esc(tuneLabel(k))+'</label><input data-tf="'+k+'" value="'+esc(t[k]||'')+'"></div>';
+          }).join('')
+      +'</div>')
+    +'</div>'
+    +'<div class="modal-ft">'
+    +'<button class="btn" data-act="close">取消</button>'
+    +'<button class="btn btn-pri" data-act="saveHost">保存</button>'
+    +'</div>';
+}
+function openHostForm(id){
+  var h = id ? state.hosts.find(function(x){ return x.id===id; }) : null;
+  if(id && !h){ toast('未找到该主机记录'); return; }
+  formEditId = h ? h.id : null;
+  openModal(renderHostForm(h), 'modal-fm');
+}
+function saveHostFromForm(){
+  var modal=document.getElementById('modal');
+  function g(n){ var el=modal.querySelector('[data-f="'+n+'"]'); return el?el.value.trim():''; }
+  function num(n){ var s=g(n); if(s==='') return null; var v=+s; return isFinite(v)?v:null; }
+  var project=g('project');
+  if(!project){
+    toast('请填写项目编码（必填）');
+    var el=modal.querySelector('[data-f="project"]'); if(el) el.focus();
+    return;
+  }
+  // 编辑时以旧记录为底，保留表单外的字段（如导入时携带的其他列）
+  var base = formEditId ? state.hosts.find(function(x){ return x.id===formEditId; }) : null;
+  var h = base ? JSON.parse(JSON.stringify(base)) : {};
+  if(!base) h.id = 'u'+Date.now();
+  ['project','code','seq','eu','isv','purpose','arch','role','installDate','licenseExpiry',
+   'os','hostname','dbVersion','plugins','ha','dataDir','dbid',
+   'cpuModel','cpuArch','nic','ip','fip','vip','mac'].forEach(function(k){ h[k]=g(k); });
+  ['cpuLogic','memTotal'].forEach(function(k){ h[k]=num(k); });
+  var pw=g('osPass');
+  if(pw) h.osPass=pw;            // 留空 = 保持原密码不动
+  else if(!base) h.osPass='';
+  var perf={};
+  ['write3k','read3k','write8m'].forEach(function(k){ var s=g('p_'+k); if(s) perf[k]=s; });
+  ['lat1','tps1Conn','tps1NoConn','lat2','tps2Conn','tps2NoConn'].forEach(function(k){
+    var s=g('p_'+k); if(s!=='' && isFinite(+s)) perf[k]=+s;
+  });
+  h.perf = Object.keys(perf).length ? perf : null;
+  var tuning={};
+  modal.querySelectorAll('[data-tf]').forEach(function(el){
+    var s=el.value.trim(); if(s) tuning[el.getAttribute('data-tf')]=s;
+  });
+  h.tuning = Object.keys(tuning).length ? tuning : null;
+  h.disks=[];
+  modal.querySelectorAll('#diskRows .fm-disk-row').forEach(function(r){
+    var d={};
+    r.querySelectorAll('[data-df]').forEach(function(el){ d[el.getAttribute('data-df')]=el.value.trim(); });
+    if(Object.keys(d).some(function(k){ return d[k]; })) h.disks.push(d);
+  });
+  if(base){
+    var i=state.hosts.findIndex(function(x){ return x.id===base.id; });
+    if(i>-1) state.hosts[i]=h;
+  }else{
+    state.hosts.push(h);
+  }
+  state.isSample=false;
+  saveHosts(); closeModal();
+  toast('已保存「'+(h.seq||h.project)+'」');
+  refreshAll();
+}
+function deleteHost(id){
+  var h=state.hosts.find(function(x){ return x.id===id; });
+  if(!h) return;
+  if(!confirm('确定删除主机「'+(h.seq||h.id)+'」吗？\n项目：'+(h.project||'—')+'\n该主机的全部字段（含磁盘、性能、参数）将从台账移除。')) return;
+  if(!confirm('再次确认：删除后需要重新录入该主机信息，是否继续？\n（建议先「导出」做备份）')) return;
+  state.hosts=state.hosts.filter(function(x){ return x.id!==id; });
+  state.isSample=false;
+  saveHosts(); closeModal();
+  toast('已删除');
+  refreshAll();
+}
+
 /* 布局同步：不读业务数据，不涉及渲染调用，可安全挂在刷新末尾 */
 function syncNavTop(){
   var h=document.querySelector('header');
@@ -780,14 +982,19 @@ function toast(msg){
   t.textContent=msg; t.className='show';
   setTimeout(function(){ t.className=''; },2200);
 }
-function openModal(html){
-  document.getElementById('modal').innerHTML=html;
+function openModal(html, cls){
+  var m=document.getElementById('modal');
+  m.className='modal'+(cls?' '+cls:'');
+  m.innerHTML=html;
   document.getElementById('mask').className='mask open';
   document.body.style.overflow='hidden';
 }
 function closeModal(){
+  var m=document.getElementById('modal');
+  m.className='modal';
   document.getElementById('mask').className='mask';
-  document.getElementById('modal').innerHTML='';
+  m.innerHTML='';
+  formEditId=null;
   document.body.style.overflow='';
 }
 
@@ -804,6 +1011,20 @@ document.addEventListener('click', function(e){
   if(act){
     var a=act.getAttribute('data-act'), key=act.getAttribute('data-key');
     if(a==='close'){ closeModal(); return; }
+    if(a==='newHost'){ openHostForm(null); return; }
+    if(a==='edit'){ openHostForm(key); return; }
+    if(a==='delHost'){ deleteHost(key); return; }
+    if(a==='saveHost'){ saveHostFromForm(); return; }
+    if(a==='diskAdd'){
+      var dr=document.getElementById('diskRows');
+      if(dr) dr.insertAdjacentHTML('beforeend', diskRowHtml({}));
+      return;
+    }
+    if(a==='diskDel'){
+      var row=act.closest('.fm-disk-row');
+      if(row) row.remove();
+      return;
+    }
     if(a==='handle'){
       if(state.handled.indexOf(key)<0) state.handled.push(key);
       lsSet(K.handled,state.handled); toast('已标记为跟进'); refreshAll(); return;
