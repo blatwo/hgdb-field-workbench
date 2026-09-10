@@ -85,11 +85,34 @@
 
 `tuning` 的 key 用驼峰，渲染时按 `tuneLabel()` 映射为 `max_connections`、`shared_buffer` 等原生名。
 
+## 资料库表结构与实体 ID
+
+本地 JSON 是**扁平**的（一台主机一个对象）；存入资料库时会拆成 **10 张关联表**，
+每层实体有自己的主键。页面在加载/保存时各做一次翻译（`assembleHosts` / `saveHostToLibrary`）。
+
+| 实体 | 资料库主键 | 格式 | 上级外键 | 对应 JSON 字段 |
+|---|---|---|---|---|
+| 项目 | `项目ID` | `PJ01` | — | `project`（项目编码） |
+| 服务器 | `服务器ID` | `SRV001` | `项目ID` | `id` / `seq` |
+| 磁盘 | `硬盘ID` | `DSK001` | `服务器ID` | `disks[].dev/usage/...` |
+| 数据库 | `数据库ID` | `DB001` | `服务器ID` | `dbVersion` / `dbid` / `ha` |
+| 性能测试 | —（1:N 挂硬盘） | — | `硬盘ID` | `perf` |
+| 操作系统 | —（1:1 挂服务器） | — | `服务器ID` | `os` / `osUser` / `osPass` / `locale` |
+| 安装 / 授权 / 备份 / 参数 | —（挂数据库） | — | `数据库ID` | `installDate` / `licenseExpiry` / `backup*` / `tuning` |
+
+ID 规则：按 `real.json` 中 hosts 的原始顺序依次编号，**稳定可复现**；
+页面新增数据时按已有最大序号 +1 续号（如 `SRV031` → `SRV032`）。
+
+> 关联键**不用** `seq`（资源序号）：它跨项目会重复（`G0-S1-1` 出现在 7 个项目里），
+> 用它关联会导致子表数据串表。`seq` 仅作展示。
+
+完整表清单、database_id、维护脚本见 [`TABLES.md`](TABLES.md)。
+
 ## 校验建议
 
-新增数据后用浏览器控制台跑一遍，确认无空指针：
+新增数据后在浏览器控制台跑一遍，确认无空指针：
 
 ```javascript
-const bad = hosts.filter(h => !h.id || !h.project);
+const bad = state.hosts.filter(h => !h.id || !h.project);
 console.log('缺主键的记录:', bad.length);
 ```

@@ -270,6 +270,15 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-
 @media(min-width:769px){
   .btn span{display:inline}
 }
+/* 同步状态指示灯 */
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+  padding:5px 10px;border-radius:999px;white-space:nowrap;flex:none}
+.sync i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.sync-ok{background:#E7F6EC;color:#0F7B3E}
+.sync-busy{background:#FEF6E0;color:#8A6100}
+.sync-err{background:#FDECEC;color:#B3261E}
+.sync-off{background:#EEF0F3;color:#5B6472}
+@media(max-width:560px){.sync span{display:none}}
 </style>
 </head>
 <body data-page-node-id="kulvWnpuDATZL1jCw9hG7F">
@@ -282,6 +291,7 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-
         <div class="hd-sub" id="hdSub" data-sp-bindable="database" data-sp-database-id="cTctQmz3hElSq0OEhYbWCa" data-page-node-id="PSWpKcCdyCUmVztabBd2JD">加载中…</div>
       </div>
       <div class="hd-tools" data-page-node-id="htqibGYFWlwDBWDT6iFIMc">
+        <span class="sync sync-off" id="syncDot" title="数据来源"><i></i><span>加载中</span></span>
         <button class="btn btn-on" id="btnMask" title="脱敏显示" data-page-node-id="G7GfzBWKzdbLl7Jd1YZz7p">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="xlmJMSICleJfwlnsYSvcEN"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" data-page-node-id="ecBRf1ZttDVV0awLAmNGEr"/><circle cx="12" cy="12" r="3" data-page-node-id="leRpSL52qroyZXRZ3G8v9T"/></svg>
           <span id="maskLabel" data-page-node-id="GKh3coNFdDZ1fxEFD2MJjc">脱敏开</span>
@@ -409,7 +419,10 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;font-
    ═══════════════════════════════════════════════════════════ */
 
 var K = { data:'wb_hgdbfw_dataset', todos:'wb_hgdbfw_todos', mask:'wb_hgdbfw_mask', handled:'wb_hgdbfw_handled' };
-var state = { hosts:[], todos:[], masked:true, handled:[], isSample:true, source:'local' };
+var state = { hosts:[], todos:[], masked:true, handled:[], isSample:true, source:'local',
+              sync:'idle', syncMsg:'',
+              /* 实体 ID 台账（新增时续号用）与项目索引（按编码复用项目） */
+              ids:{ project:[], server:[], disk:[], database:[] }, projIndex:{} };
 
 /* ═══════════════════════════════════════════════════════════
    资料库数据表（database_id 由建表脚本产出，硬编码）
@@ -447,9 +460,17 @@ var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function lsGet(k, fb){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):fb; }catch(e){ return fb; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ toast('本地存储写入失败'); } }
 
+/* 资料库 SDK 句柄 */
+function sdk(){ return (window.__SMART_PAGE__ && window.__SMART_PAGE__.database) || null; }
+/* 写入返回值里取记录 id（不同后端字段名不一，逐个兜底） */
+function recId(r){ return (r && (r.id || r.recordId || r._id || (r.result && r.result.id))) || ''; }
+
+/* 同步状态：idle / saving / error / local */
+function setSync(st, msg){ state.sync = st; state.syncMsg = msg || ''; renderSync(); }
+
 /* 翻页拉全量：游标入参名必须是 startCursor，三重防呆 */
 function dbLoadAll(databaseId, startCursor, acc, guard){
-  var db = window.__SMART_PAGE__ && window.__SMART_PAGE__.database;
+  var db = sdk();
   if(!db) return Promise.reject(new Error('SDK 不可用'));
   var DATABASE_ID = databaseId;   // 逐表遍历，值来自下方 DB 映射
   acc = acc || []; guard = guard || 0;
@@ -474,61 +495,119 @@ function dstr(v){
   return m ? m[0] : '';
 }
 
-/* 把 10 张关联表按 主机ID / 项目编码 组装回扁平 hosts 结构（现有渲染逻辑零改动） */
+/* ── 值归一（写入侧）── */
+var NULLISH = {'-':1,'--':1,'N/A':1,'n/a':1,'无':1,'/':1};
+function cTxt(v){ var t=(v==null?'':String(v)).trim(); return (!t||NULLISH[t])?'':t; }
+function cNum(v){ if(v===''||v==null) return null; var n=+v; return isFinite(n)?n:null; }
+function pTxt(v){ var t=cTxt(v); return t?{text:t}:null; }
+function pNum(v){ var n=cNum(v); return n===null?null:{number:n}; }
+function pSel(v){ var t=cTxt(v); return t?{select:t}:null; }
+function pDate(v){ var d=(v==null?'':String(v)).trim(); return /^\d{4}-\d{2}-\d{2}$/.test(d)?{date:d}:null; }
+/* 有值才写入：增量更新语义下，未传的字段保持原值 */
+function put(rec, key, val){ if(val!==null && val!==undefined) rec[key] = val; }
+
+/* 生成下一个实体 ID：前缀 + 补零序号 */
+function nextId(prefix, used, width){
+  var max = 0;
+  (used || []).forEach(function(v){
+    var m = String(v==null?'':v).match(new RegExp('^' + prefix + '(\\d+)$'));
+    if(m){ var n = parseInt(m[1], 10); if(n > max) max = n; }
+  });
+  var s = String(max + 1);
+  while(s.length < (width||3)) s = '0' + s;
+  return prefix + s;
+}
+
+/* 性能记录 -> 扁平对象 */
+function perfObj(pf){
+  if(!pf) return {};
+  var has = false;
+  ['落盘写3KB','随机读3KB','大块写8MB','10客户端TPS','200并发TPS'].forEach(function(k){
+    if(pf[k]!=null && pf[k]!=='') has = true;
+  });
+  if(!has) return {};
+  return { write3k:pf['落盘写3KB']||'', read3k:pf['随机读3KB']||'', write8m:pf['大块写8MB']||'',
+           lat1:pf['10客户端延迟ms'], tps1Conn:pf['10客户端TPS'], tps1NoConn:pf['10客户端TPS不含连接'],
+           lat2:pf['200并发延迟ms'], tps2Conn:pf['200并发TPS'], tps2NoConn:pf['200并发TPS不含连接'] };
+}
+
+/* ── 组装：10 张关联表 -> 扁平 hosts ──
+   关联链：项目(PJ)--项目ID-->服务器(SRV)--服务器ID-->操作系统/磁盘(DSK)/数据库(DB)
+           磁盘--硬盘ID-->性能测试    数据库--数据库ID-->安装/授权/备份/参数          */
 function assembleHosts(t){
-  var projMap = {};
-  (t.project || []).forEach(function(r){ if(r['项目编码']) projMap[r['项目编码']] = r; });
+  var projById = {}, projByCode = {};
+  (t.project || []).forEach(function(r){
+    if(r['项目ID']) projById[r['项目ID']] = r;
+    if(r['项目编码']) projByCode[r['项目编码']] = r;
+  });
 
   function byKey(rows, key){
     var m = {};
-    rows.forEach(function(r){ var k = r[key]; if(!k) return; (m[k] = m[k] || []).push(r); });
+    (rows || []).forEach(function(r){ var k = r[key]; if(!k) return; (m[k] = m[k] || []).push(r); });
     return m;
   }
-  var osM    = byKey(t.os || [], '主机ID');
-  var diskM  = byKey(t.disk || [], '主机ID');
-  var dbM    = byKey(t.database || [], '主机ID');
-  var perfM  = byKey(t.perf || [], '主机ID');
-  var insM   = byKey(t.install || [], '主机ID');
-  var licM   = byKey(t.license || [], '主机ID');
-  var bakM   = byKey(t.backup || [], '主机ID');
-  var parM   = byKey(t.param || [], '主机ID');
+  var osM   = byKey(t.os,       '服务器ID');
+  var diskM = byKey(t.disk,     '服务器ID');
+  var dbM   = byKey(t.database, '服务器ID');
+  var perfM = byKey(t.perf,     '硬盘ID');
+  var insM  = byKey(t.install,  '数据库ID');
+  var licM  = byKey(t.license,  '数据库ID');
+  var bakM  = byKey(t.backup,   '数据库ID');
+  var parM  = byKey(t.param,    '数据库ID');
+
+  /* 供新增时续号 + 按编码找项目 */
+  state.ids = {
+    project : (t.project  || []).map(function(r){ return r['项目ID']; }),
+    server  : (t.server   || []).map(function(r){ return r['服务器ID']; }),
+    disk    : (t.disk     || []).map(function(r){ return r['硬盘ID']; }),
+    database: (t.database || []).map(function(r){ return r['数据库ID']; })
+  };
+  state.projIndex = projByCode;
 
   return (t.server || []).map(function(sv){
-    var hid = sv['主机ID'] || '';
-    var pj  = projMap[sv['项目编码']] || {};
-    var o   = (osM[hid]   || [])[0] || {};
-    var d   = (dbM[hid]   || [])[0] || {};
-    var ins = (insM[hid]  || [])[0] || {};
-    var lic = (licM[hid]  || [])[0] || {};
-    var pf  = (perfM[hid] || [])[0] || {};
-    var bk  = (bakM[hid]  || [])[0] || {};
+    var sid = sv['服务器ID'] || '';
+    var pid = sv['项目ID'] || '';
+    var pj  = projById[pid] || {};
+    var o   = (osM[sid] || [])[0] || {};
+    var d   = (dbM[sid] || [])[0] || {};
+    var did = d['数据库ID'] || '';
+    var ins = (insM[did] || [])[0] || {};
+    var lic = (licM[did] || [])[0] || {};
+    var bk  = (bakM[did] || [])[0] || {};
 
-    /* 参数竖表 -> 对象 */
-    var tuning = {};
-    (parM[hid] || []).forEach(function(p){
+    /* 参数竖表 -> 对象（同时记住每条参数的记录 id，写回时用） */
+    var tuning = {}, tuningRid = {};
+    (parM[did] || []).forEach(function(p){
       var name = p['参数名']; if(!name) return;
       tuning[name] = p['参数值'];
+      tuningRid[name] = p._id || '';
     });
 
-    /* 磁盘多行 */
-    var disks = (diskM[hid] || []).map(function(d){
-      return { usage:d['用途']||'', dev:d['设备名']||'', type:d['磁盘类型']||'',
-               lvm:d['是否LVM']||'', lv:d['逻辑卷']||'', fs:d['文件系统']||'',
-               size:d['容量']||'', mount:d['挂载点']||'', uuid:d['UUID']||'' };
+    /* 磁盘多行：每块盘带自己的 硬盘ID 和性能测试 */
+    var disks = (diskM[sid] || []).map(function(dk){
+      var dkid = dk['硬盘ID'] || '';
+      var pf = (perfM[dkid] || [])[0] || {};
+      return { rid: dk._id || '', diskId: dkid, perfRid: pf._id || '',
+               usage: dk['用途']||'', dev: dk['设备名']||'', type: dk['磁盘类型']||'',
+               lvm: dk['是否LVM']||'', lv: dk['逻辑卷']||'', fs: dk['文件系统']||'',
+               size: dk['容量']||'', mount: dk['挂载点']||'', uuid: dk['UUID']||'',
+               perf: perfObj(pf) };
     });
 
-    /* 性能测试 */
-    var perf = {};
-    if(Object.keys(pf).length){
-      perf = { write3k:pf['落盘写3KB']||'', read3k:pf['随机读3KB']||'', write8m:pf['大块写8MB']||'',
-               lat1:pf['10客户端延迟ms'], tps1Conn:pf['10客户端TPS'], tps1NoConn:pf['10客户端TPS不含连接'],
-               lat2:pf['200并发延迟ms'], tps2Conn:pf['200并发TPS'], tps2NoConn:pf['200并发TPS不含连接'] };
+    /* 主机级 perf 取第一块有性能数据的盘，保持既有渲染逻辑零改动 */
+    var perf = {}, perfDiskId = '';
+    for(var i = 0; i < disks.length; i++){
+      if(Object.keys(disks[i].perf).length){ perf = disks[i].perf; perfDiskId = disks[i].diskId; break; }
     }
 
     return {
-      id: hid,
-      project: sv['项目编码'] || '',
-      seq: sv['资源序号'] || '',
+      id: sid,                        /* 兼容既有以 id 为唯一键的逻辑 */
+      pid: pid, sid: sid, did: did, perfDiskId: perfDiskId,
+      _rid: { project: pj._id || '', server: sv._id || '', os: o._id || '',
+              db: d._id || '', install: ins._id || '', license: lic._id || '',
+              backup: bk._id || '', param: tuningRid },
+      seq: sv['资源序号'] || sv['主机名'] || sid,
+      project: pj['项目编码'] || '',
       eu: pj['最终用户'] || '',
       isv: pj['ISV软件商'] || '',
       purpose: pj['业务系统用途'] || '',
@@ -558,13 +637,13 @@ function assembleHosts(t){
       virt: sv['虚拟化'] || '',
       memTotal: sv['内存GB'], memAvail: sv['可用内存GB'], swap: sv['交换分区GB'],
       installDate: dstr(sv['安装时间']),
-      scope: sv['交付范围'] || '',
-      pkg: sv['软件包'] || sv['安装包'] || '',
+      scope: sv['交付范围'] || pj['交付范围'] || '',
+      pkg: sv['软件包'] || '',
       /* 操作系统 */
       os: o['操作系统'] || '',
       osUser: o['系统用户'] || '',
       osPass: o['口令'] || '',
-      locale: pj['系统语言'] || o['系统语言'] || '',
+      locale: o['系统语言'] || pj['系统语言'] || '',
       dataDir: o['数据目录'] || d['数据目录'] || '',
       /* 数据库 */
       dbVersion: d['数据库版本'] || ins['数据库版本'] || '',
@@ -618,6 +697,319 @@ function getSample(){
   try{ var d=JSON.parse(document.getElementById('sampleData').textContent);
        return (d&&d.hosts&&d.hosts.length)?d.hosts:[]; }catch(e){ return []; }
 }
+
+/* ════════════ 写入侧：扁平 host -> 10 张表 ════════════ */
+
+/* 删除单条记录：表 id 由调用方指定，内部统一走 DATABASE_ID 常量 */
+function delRecord(db, table, recordId){
+  var DATABASE_ID = table;
+  return db.deleteRecord({ databaseId: DATABASE_ID, recordId: recordId });
+}
+
+/* 单条 upsert：有记录 id 就增量更新，否则新增并把新 id 回填 */
+function upsert(db, databaseId, recordId, properties, onNew){
+  var DATABASE_ID = databaseId;   // 逐表写入，具体表 id 由调用方传入
+  if(recordId){
+    return db.updateRecord({ databaseId: DATABASE_ID, recordId: recordId, properties: properties });
+  }
+  return db.addRecord({ databaseId: DATABASE_ID, properties: properties })
+    .then(function(r){ var nid = recId(r); if(nid && onNew) onNew(nid); return r; });
+}
+
+function projProps(h, pid){
+  var rec = { '项目ID': {text: pid || ''} };
+  put(rec, '项目编码', pTxt(h.project));
+  put(rec, '最终用户', pTxt(h.eu));
+  put(rec, 'ISV软件商', pTxt(h.isv));
+  put(rec, '业务系统用途', pTxt(h.purpose));
+  put(rec, '销售负责人', pTxt(h.sales));
+  put(rec, '标识码', pTxt(h.code));
+  put(rec, '部署架构', pSel(h.arch));
+  put(rec, '交付范围', pTxt(h.scope));
+  put(rec, '云平台', pTxt(h.cloudPlatform));
+  put(rec, '系统语言', pTxt(h.locale));
+  return rec;
+}
+function serverProps(h){
+  var rec = { '服务器ID': {text: h.sid || ''}, '项目ID': {text: h.pid || ''} };
+  put(rec, '资源序号',     pTxt(h.seq));
+  put(rec, '主备角色',     pSel(h.role));
+  put(rec, '主机名',       pTxt(h.hostname));
+  put(rec, '服务器厂商',   pTxt(h.vendor));
+  put(rec, '云服务厂商',   pTxt(h.cloud));
+  put(rec, '网卡',         pTxt(h.nic));
+  put(rec, '业务IP',       pTxt(h.ip));
+  put(rec, '浮动IP',       pTxt(h.fip));
+  put(rec, 'VIP',          pTxt(h.vip));
+  put(rec, 'MAC地址',      pTxt(h.mac));
+  put(rec, 'CPU型号',      pTxt(h.cpuModel));
+  put(rec, 'CPU架构',      pSel(h.cpuArch));
+  put(rec, '逻辑核数',     pNum(h.cpuLogic));
+  put(rec, '每核线程',     pNum(h.threadsPerCore));
+  put(rec, '每槽核数',     pNum(h.coresPerSocket));
+  put(rec, '物理槽数',     pNum(h.sockets));
+  put(rec, 'NUMA',         pNum(h.numa));
+  put(rec, '最大频率MHz',  pNum(h.freqMax));
+  put(rec, 'L1d缓存',      pTxt(h.l1d));
+  put(rec, 'L1i缓存',      pTxt(h.l1i));
+  put(rec, 'L2缓存',       pTxt(h.l2));
+  put(rec, 'L3缓存',       pTxt(h.l3));
+  put(rec, '虚拟化',       pTxt(h.virt));
+  put(rec, '内存GB',       pNum(h.memTotal));
+  put(rec, '可用内存GB',   pNum(h.memAvail));
+  put(rec, '交换分区GB',   pNum(h.swap));
+  put(rec, '安装时间',     pDate(h.installDate));
+  put(rec, '交付范围',     pTxt(h.scope));
+  put(rec, '软件包',       pTxt(h.pkg));
+  return rec;
+}
+function osProps(h){
+  var rec = { '服务器ID': {text: h.sid || ''} };
+  put(rec, '操作系统',   pTxt(h.os));
+  put(rec, '系统用户',   pTxt(h.osUser));
+  put(rec, '口令',       pTxt(h.osPass));
+  put(rec, '系统语言',   pTxt(h.locale));
+  put(rec, '数据目录',   pTxt(h.dataDir));
+  return rec;
+}
+function dbProps(h){
+  var rec = { '数据库ID': {text: h.did || ''}, '服务器ID': {text: h.sid || ''} };
+  put(rec, '数据库版本', pSel(h.dbVersion));
+  put(rec, 'DBID',       pTxt(h.dbid));
+  put(rec, '高可用组件', pSel(h.ha));
+  put(rec, '部署范围',   pTxt(h.scope));
+  put(rec, '读写分离',   pTxt(h.rwSplit));
+  put(rec, '只读端口',   pTxt(h.rwPort));
+  put(rec, '扩展插件',   pTxt(h.plugins));
+  put(rec, '数据目录',   pTxt(h.dataDir));
+  return rec;
+}
+function installProps(h){
+  var rec = { '数据库ID': {text: h.did || ''} };
+  put(rec, '数据库版本', pTxt(h.dbVersion));
+  put(rec, '安装时间',   pDate(h.installDate));
+  put(rec, '安装包',     pTxt(h.pkg));
+  put(rec, '数据目录',   pTxt(h.dataDir));
+  put(rec, 'OS用户',     pTxt(h.osUser));
+  put(rec, '交付范围',   pTxt(h.scope));
+  return rec;
+}
+function licenseProps(h){
+  var rec = { '数据库ID': {text: h.did || ''} };
+  put(rec, '数据库版本', pTxt(h.dbVersion));
+  put(rec, '授权到期',   pDate(h.licenseExpiry));
+  put(rec, '授权类型',   pSel(h.licenseType || '正式'));
+  return rec;
+}
+function backupProps(h){
+  var rec = { '数据库ID': {text: h.did || ''} };
+  put(rec, '备份时间',       pTxt(h.backupTime));
+  put(rec, '备份保留天数',   pNum(h.backupKeep));
+  put(rec, '备份脚本',       pTxt(h.backupScript));
+  rec['是否启用'] = {checkbox: true};
+  return rec;
+}
+function diskProps(dk, h){
+  var rec = { '硬盘ID': {text: dk.diskId || ''}, '服务器ID': {text: h.sid || ''} };
+  put(rec, '用途',     pSel(dk.usage));
+  put(rec, '设备名',   pTxt(dk.dev));
+  put(rec, '磁盘类型', pSel(dk.type));
+  put(rec, '是否LVM',  pSel(dk.lvm));
+  put(rec, '逻辑卷',   pTxt(dk.lv));
+  put(rec, '文件系统', pTxt(dk.fs));
+  put(rec, '容量',     pTxt(dk.size));
+  put(rec, '挂载点',   pTxt(dk.mount));
+  put(rec, 'UUID',     pTxt(dk.uuid));
+  return rec;
+}
+function perfProps(dk, h){
+  var p = dk.perf || {};
+  var rec = { '硬盘ID': {text: dk.diskId || ''}, '服务器ID': {text: h.sid || ''} };
+  put(rec, '磁盘设备',             pTxt(dk.dev));
+  put(rec, '落盘写3KB',            pTxt(p.write3k));
+  put(rec, '随机读3KB',            pTxt(p.read3k));
+  put(rec, '大块写8MB',            pTxt(p.write8m));
+  put(rec, '10客户端TPS',          pNum(p.tps1Conn));
+  put(rec, '10客户端TPS不含连接',  pNum(p.tps1NoConn));
+  put(rec, '10客户端延迟ms',       pNum(p.lat1));
+  put(rec, '200并发TPS',           pNum(p.tps2Conn));
+  put(rec, '200并发TPS不含连接',   pNum(p.tps2NoConn));
+  put(rec, '200并发延迟ms',        pNum(p.lat2));
+  put(rec, '测试时间',             pDate(h.installDate));
+  return rec;
+}
+
+/* 参数竖表：按 参数名 做增量 diff（改值 / 新增 / 删除） */
+function saveParams(db, h){
+  var DATABASE_ID = DB.param;
+  var ridMap = h._rid.param || (h._rid.param = {});
+  var tuning = h.tuning || {};
+  var jobs = [];
+  Object.keys(tuning).forEach(function(n){
+    var val = cTxt(tuning[n]);
+    var old = ridMap[n];
+    if(old){
+      jobs.push(function(){
+        return db.updateRecord({ databaseId: DATABASE_ID, recordId: old,
+          properties: { '参数值': {text: val} } });
+      });
+    }else{
+      jobs.push(function(){
+        return db.addRecord({ databaseId: DATABASE_ID, properties: {
+            '数据库ID': {text: h.did || ''}, '参数名': {text: n}, '参数值': {text: val},
+            'PG原生名': {text: TUNE_PG_FALLBACK[n] || n} } })
+          .then(function(r){ ridMap[n] = recId(r); });
+      });
+    }
+  });
+  Object.keys(ridMap).forEach(function(n){
+    if(n in tuning) return;
+    var old = ridMap[n];
+    jobs.push(function(){
+      return delRecord(db, DB.param, old).then(function(){ delete ridMap[n]; });
+    });
+  });
+  return jobs.reduce(function(p, fn){ return p.then(fn); }, Promise.resolve());
+}
+
+/* 磁盘 + 每块盘的性能测试：新增 / 更新 / 删除 */
+function saveDisks(db, h){
+  var list = h.disks || [];
+  var jobs = [];
+  var alive = {};
+
+  list.forEach(function(dk){
+    if(!dk.diskId){
+      dk.diskId = nextId('DSK', state.ids.disk, 3);
+      state.ids.disk.push(dk.diskId);
+    }
+    alive[dk.diskId] = 1;
+    jobs.push(function(){
+      return upsert(db, DB.disk, dk.rid, diskProps(dk, h), function(nid){ dk.rid = nid; });
+    });
+    jobs.push(function(){
+      var has = dk.perf && Object.keys(dk.perf).length;
+      if(!has){
+        if(dk.perfRid){
+          return delRecord(db, DB.perf, dk.perfRid).then(function(){ dk.perfRid = ''; });
+        }
+        return Promise.resolve();
+      }
+      return upsert(db, DB.perf, dk.perfRid, perfProps(dk, h), function(nid){ dk.perfRid = nid; });
+    });
+  });
+
+  /* 表单里被删掉的磁盘，连同其性能记录一并删除 */
+  (h._removedDisks || []).forEach(function(old){
+    if(alive[old.diskId]) return;
+    jobs.push(function(){
+      var p = Promise.resolve();
+      if(old.perfRid) p = p.then(function(){ return delRecord(db, DB.perf, old.perfRid); });
+      if(old.rid)     p = p.then(function(){ return delRecord(db, DB.disk, old.rid); });
+      return p;
+    });
+  });
+
+  return jobs.reduce(function(p, fn){ return p.then(fn); }, Promise.resolve());
+}
+
+/* 保存一台主机（含全部子表）到资料库 */
+function saveHostToLibrary(h){
+  var db = sdk();
+  if(!db) return Promise.reject(new Error('SDK 不可用'));
+  h._rid = h._rid || {};
+
+  var steps = [];
+
+  /* 1. 项目：按编码复用，找不到就新建编号 */
+  steps.push(function(){
+    if(!h.pid){
+      var hit = (state.projIndex || {})[cTxt(h.project)];
+      if(hit){ h.pid = hit['项目ID'] || ''; h._rid.project = hit._id || ''; }
+    }
+    if(!h.pid){
+      h.pid = nextId('PJ', state.ids.project, 2);
+      state.ids.project.push(h.pid);
+    }
+    return upsert(db, DB.project, h._rid.project, projProps(h, h.pid), function(nid){ h._rid.project = nid; });
+  });
+
+  /* 2. 服务器 */
+  steps.push(function(){
+    if(!h.sid){
+      h.sid = nextId('SRV', state.ids.server, 3);
+      state.ids.server.push(h.sid);
+      h.id = h.sid;
+    }
+    return upsert(db, DB.server, h._rid.server, serverProps(h), function(nid){ h._rid.server = nid; });
+  });
+
+  /* 3. 操作系统（1:1） */
+  steps.push(function(){
+    return upsert(db, DB.os, h._rid.os, osProps(h), function(nid){ h._rid.os = nid; });
+  });
+
+  /* 4. 数据库（1:1） */
+  steps.push(function(){
+    if(!h.did){
+      h.did = nextId('DB', state.ids.database, 3);
+      state.ids.database.push(h.did);
+    }
+    return upsert(db, DB.database, h._rid.db, dbProps(h), function(nid){ h._rid.db = nid; });
+  });
+
+  /* 5. 安装 / 授权 / 备份（挂在 数据库ID 下） */
+  steps.push(function(){ return upsert(db, DB.install, h._rid.install, installProps(h), function(nid){ h._rid.install = nid; }); });
+  steps.push(function(){
+    if(!h.licenseExpiry && !h.licenseType) return Promise.resolve();
+    return upsert(db, DB.license, h._rid.license, licenseProps(h), function(nid){ h._rid.license = nid; });
+  });
+  steps.push(function(){
+    if(!h.backupTime && !h.backupScript && h.backupKeep == null) return Promise.resolve();
+    return upsert(db, DB.backup, h._rid.backup, backupProps(h), function(nid){ h._rid.backup = nid; });
+  });
+
+  /* 6. 参数竖表 */
+  steps.push(function(){ return saveParams(db, h); });
+  /* 7. 磁盘 + 性能测试 */
+  steps.push(function(){ return saveDisks(db, h); });
+
+  return steps.reduce(function(p, fn){ return p.then(fn); }, Promise.resolve());
+}
+
+/* 从资料库删除一台主机（级联删除全部子表记录） */
+function deleteHostFromLibrary(h){
+  var db = sdk();
+  if(!db) return Promise.reject(new Error('SDK 不可用'));
+  var rid = h._rid || {};
+  var jobs = [];
+  function del(table, id){
+    if(!id) return;
+    var DATABASE_ID = table;
+    jobs.push(function(){ return delRecord(db, table, id); });
+  }
+  var pm = rid.param || {};
+  Object.keys(pm).forEach(function(n){ del(DB.param, pm[n]); });
+  (h.disks || []).forEach(function(dk){ del(DB.perf, dk.perfRid); del(DB.disk, dk.rid); });
+  del(DB.install, rid.install);
+  del(DB.license, rid.license);
+  del(DB.backup,  rid.backup);
+  del(DB.database, rid.db);
+  del(DB.os,      rid.os);
+  del(DB.server,  rid.server);
+
+  var chain = jobs.reduce(function(p, fn){ return p.then(fn); }, Promise.resolve());
+
+  /* 该项目下已无其它服务器 -> 连项目记录一起删 */
+  var others = state.hosts.filter(function(x){ return x.pid === h.pid && x.id !== h.id; });
+  if(h.pid && rid.project && others.length === 0){
+    chain = chain.then(function(){
+      return delRecord(db, DB.project, rid.project);
+    });
+  }
+  return chain;
+}
+
 function getDefaultTodos(){
   var t=new Date(TODAY); t.setDate(t.getDate()-3);
   return [{ id:'t1', text:'示例：确认省交易中心授权续期进展（该授权已过期）', due:iso(t), done:false }];
@@ -684,6 +1076,25 @@ function uniq(arr){ var s={},o=[]; arr.forEach(function(v){ if(v&&!s[v]){s[v]=1;
 /* ── 渲染层（彼此独立，禁止互调）── */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* 同步状态指示灯：只更新自身，不触发其它渲染 */
+function renderSync(){
+  var el = document.getElementById('syncDot');
+  if(!el) return;
+  var m;
+  if(state.source === 'library'){
+    m = state.sync === 'saving' ? ['同步中…','busy']
+      : state.sync === 'error' ? ['同步失败','err']
+      : ['资料库已同步','ok'];
+  }else if(state.source === 'sample'){
+    m = ['示例数据','off'];
+  }else{
+    m = ['本机数据','off'];
+  }
+  el.className = 'sync sync-' + m[1];
+  el.innerHTML = '<i></i><span>' + m[0] + '</span>';
+  el.title = state.sync === 'error' ? ('写入失败：' + (state.syncMsg || '')) : '数据来源与同步状态';
+}
 
 function renderHeader(){
   var n=state.hosts.length, p=groupProjects().length;
@@ -999,7 +1410,7 @@ function fmSec(title, inner){
 function diskRowHtml(d){
   d=d||{};
   function g(n,ph){ return '<input data-df="'+n+'" value="'+esc(d[n]||'')+'" placeholder="'+esc(ph||'')+'">'; }
-  return '<div class="fm-disk-row"><div class="fm-disk">'
+  return '<div class="fm-disk-row" data-rid="'+esc(d.rid||'')+'" data-disk-id="'+esc(d.diskId||'')+'" data-perf-rid="'+esc(d.perfRid||'')+'"><div class="fm-disk">'
     + g('usage','用途 如 数据盘') + g('dev','/dev/sdc') + g('type','HDD/SSD') + g('lvm','LVM 是/否')
     + g('lv','逻辑卷') + g('fs','xfs') + g('size','500 GB') + g('mount','/data')
     + '</div><button class="x" data-act="diskDel" aria-label="删除该磁盘" title="删除该磁盘" style="width:32px;height:32px">'
@@ -1128,33 +1539,86 @@ function saveHostFromForm(){
     var s=el.value.trim(); if(s) tuning[el.getAttribute('data-tf')]=s;
   });
   h.tuning = Object.keys(tuning).length ? tuning : null;
-  h.disks=[];
+
+  /* 磁盘行：带出资料库记录标识（rid / 硬盘ID / 性能记录），编辑时才不会丢关联 */
+  var oldDisks = (base && base.disks) ? base.disks : [];
+  var newDisks = [];
   modal.querySelectorAll('#diskRows .fm-disk-row').forEach(function(r){
     var d={};
     r.querySelectorAll('[data-df]').forEach(function(el){ d[el.getAttribute('data-df')]=el.value.trim(); });
-    if(Object.keys(d).some(function(k){ return d[k]; })) h.disks.push(d);
+    if(!Object.keys(d).some(function(k){ return d[k]; })) return;
+    d.rid     = r.getAttribute('data-rid') || '';
+    d.diskId  = r.getAttribute('data-disk-id') || '';
+    d.perfRid = r.getAttribute('data-perf-rid') || '';
+    newDisks.push(d);
   });
+  /* 表单里的性能测试归属到数据盘（没有数据盘则第一块），与读取侧规则一致 */
+  var target = null;
+  newDisks.forEach(function(dk){ if(!target && h.perfDiskId && dk.diskId===h.perfDiskId) target=dk; });
+  newDisks.forEach(function(dk){ if(!target && cTxt(dk.usage)==='数据盘') target=dk; });
+  if(!target && newDisks.length) target = newDisks[0];
+  if(target) target.perf = perf;
+  h.disks = newDisks;
+  /* 记录被表单删掉的盘，保存时级联删除其磁盘记录与性能记录 */
+  h._removedDisks = oldDisks.filter(function(o){
+    return !newDisks.some(function(n){ return n.diskId && n.diskId === o.diskId; });
+  });
+
   if(base){
     var i=state.hosts.findIndex(function(x){ return x.id===base.id; });
     if(i>-1) state.hosts[i]=h;
   }else{
     state.hosts.push(h);
   }
-  state.isSample=false; state.source='local';
-  saveHosts(); closeModal();
-  toast('已保存「'+(h.seq||h.project)+'」');
-  refreshAll();
+  state.isSample=false;
+
+  /* 资料库在线 -> 反向写入 10 张表；否则退回本地存储 */
+  if(state.source==='library' && sdk()){
+    setSync('saving');
+    saveHostToLibrary(h).then(function(){
+      closeModal(); setSync('idle');
+      toast('已保存并同步到资料库');
+      return reloadFromLibrary();
+    }).catch(function(err){
+      /* 写库失败：保住本地副本并如实提示，不假装成功 */
+      state.source='local';
+      saveHosts(); closeModal();
+      setSync('error', shortErr(err));
+      toast('资料库写入失败：'+shortErr(err));
+      refreshAll();
+    });
+  }else{
+    state.source='local';
+    saveHosts(); closeModal();
+    toast('已保存「'+(h.seq||h.project)+'」');
+    refreshAll();
+  }
 }
 function deleteHost(id){
   var h=state.hosts.find(function(x){ return x.id===id; });
   if(!h) return;
-  if(!confirm('确定删除主机「'+(h.seq||h.id)+'」吗？\n项目：'+(h.project||'—')+'\n该主机的全部字段（含磁盘、性能、参数）将从台账移除。')) return;
-  if(!confirm('再次确认：删除后需要重新录入该主机信息，是否继续？\n（建议先「导出」做备份）')) return;
-  state.hosts=state.hosts.filter(function(x){ return x.id!==id; });
-  state.isSample=false; state.source='local';
-  saveHosts(); closeModal();
-  toast('已删除');
-  refreshAll();
+  var extra = (state.source==='library' && sdk())
+    ? '\n该主机在资料库中的记录（服务器/操作系统/磁盘/性能/数据库/安装/授权/备份/参数）会一并删除。' : '';
+  if(!confirm('确定删除主机「'+(h.seq||h.id)+'」吗？\n项目：'+(h.project||'—')+extra)) return;
+  if(!confirm('再次确认：此操作不可撤销，是否继续？\n（建议先「导出」做备份）')) return;
+
+  function dropLocal(msg){ state.hosts=state.hosts.filter(function(x){ return x.id!==id; }); closeModal(); toast(msg); refreshAll(); }
+
+  if(state.source==='library' && sdk()){
+    setSync('saving');
+    deleteHostFromLibrary(h).then(function(){
+      state.hosts=state.hosts.filter(function(x){ return x.id!==id; });
+      closeModal(); setSync('idle'); toast('已从资料库删除');
+      return reloadFromLibrary();
+    }).catch(function(err){
+      setSync('error', shortErr(err));
+      toast('资料库删除失败：'+shortErr(err));
+      refreshAll();
+    });
+  }else{
+    state.isSample=false; state.source='local';
+    saveHosts(); dropLocal('已删除');
+  }
 }
 
 /* 布局同步：不读业务数据，不涉及渲染调用，可安全挂在刷新末尾 */
@@ -1163,9 +1627,28 @@ function syncNavTop(){
   if(h && h.offsetHeight) document.documentElement.style.setProperty('--navh', h.offsetHeight+'px');
 }
 
+/* 错误信息压缩成一行短提示 */
+function shortErr(err){
+  var m = (err && (err.message || err.backend_message || err.error_code)) || String(err || '未知错误');
+  m = String(m).replace(/\s+/g,' ').trim();
+  return m.length > 70 ? m.slice(0,70) + '…' : m;
+}
+/* 写入成功后重新拉全量，保证页面与资料库一致 */
+function reloadFromLibrary(){
+  return loadFromLibrary().then(function(hs){
+    var keepTodos=state.todos, keepMasked=state.masked, keepHandled=state.handled;
+    state.hosts = hs; state.source='library'; state.isSample=false;
+    state.todos=keepTodos; state.masked=keepMasked; state.handled=keepHandled;
+    refreshAll();
+  }).catch(function(err){
+    console.error('[library] 重新拉取失败:', err);
+    refreshAll();
+  });
+}
+
 /* ── 统一刷新入口（唯一调度点）── */
 function refreshAll(){
-  renderHeader(); renderFilters(); renderToday();
+  renderHeader(); renderSync(); renderFilters(); renderToday();
   renderLicense(); renderProjects(); renderHosts(); renderPerf();
   syncNavTop();
 }
@@ -1349,29 +1832,25 @@ function initApp(){
   var local = loadLocal();
   var db = window.__SMART_PAGE__ && window.__SMART_PAGE__.database;
 
-  /* 本机已有自定义数据集：优先用本机，不覆盖 */
-  if(!local.isSample){
-    applyHosts(local.hosts, false, 'local');
-    refreshAll();
-    return;
-  }
+  /* 没有资料库能力：纯本地模式 */
   if(!db){
-    applyHosts(local.hosts, true, 'sample');
+    applyHosts(local.hosts, local.isSample, local.isSample ? 'sample' : 'local');
     refreshAll();
     return;
   }
-  /* 从资料库在线加载 */
+  /* 资料库是在线权威数据源，优先加载；本机数据只在离线时兜底 */
   loadFromLibrary().then(function(hs){
     if(hs && hs.length){
       applyHosts(hs, false, 'library');
     }else{
-      applyHosts(local.hosts, true, 'sample');
+      applyHosts(local.hosts, local.isSample, local.isSample ? 'sample' : 'local');
     }
     refreshAll();
     subscribeUpdates();
   }).catch(function(err){
     console.error('[library] 加载失败，降级本地:', err);
-    applyHosts(local.hosts, true, 'sample');
+    applyHosts(local.hosts, local.isSample, local.isSample ? 'sample' : 'local');
+    setSync('error', '资料库不可用');
     refreshAll();
   });
 }
