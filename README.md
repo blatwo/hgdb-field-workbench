@@ -5,6 +5,9 @@
 
 > 一个 HTML 文件，零依赖、零构建、离线可用。手机浏览器打开后可「添加到主屏幕」当 App 用。
 
+- **仓库**：https://github.com/blatwo/hgdb-field-workbench
+- **在线预览**：https://www.workbuddy.cn/space/d/mcWyd7f08Tr5iJoZ7nWisd
+
 ---
 
 ## 一、先看这个：数据安全策略
